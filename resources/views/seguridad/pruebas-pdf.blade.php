@@ -37,6 +37,7 @@
                 <th>Colaborador</th>
                 <th>Cédula</th>
                 <th>Tipo</th>
+                <th>Turno</th>
                 <th>Dispositivo</th>
                 <th>Resultado</th>
                 <th>Evaluación</th>
@@ -57,6 +58,7 @@
                     <td>{{ $prueba->colaborador?->nombre_completo }}</td>
                     <td>{{ $prueba->colaborador?->cedula }}</td>
                     <td>{{ $prueba->tipoLabel() }}</td>
+                    <td>{{ $prueba->turno ?? '—' }}</td>
                     <td>{{ $prueba->alcoholimetro?->codigo }}</td>
                     <td class="{{ $prueba->es_positivo ? 'positivo' : '' }}">{{ $prueba->resultado ?? '—' }}</td>
                     <td>{{ $prueba->estado === 'programada' ? '—' : $prueba->evaluacion() }}</td>

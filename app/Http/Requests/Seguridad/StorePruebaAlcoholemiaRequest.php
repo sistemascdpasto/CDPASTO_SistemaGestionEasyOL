@@ -26,7 +26,8 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
 
         return [
             'colaborador_id' => ['required', 'integer', Rule::exists('colaboradores', 'id')->whereNull('deleted_at')],
-            'tipo' => ['required', Rule::in(['pre_ruta', 'ruta', 'post_ruta'])],
+            'tipo' => ['required', Rule::in(['ingreso', 'aleatoria', 'salida'])],
+            'turno' => ['required', Rule::in(['A', 'B', 'C'])],
             'es_programacion' => ['boolean'],
             'programada_en' => [
                 'required_if:es_programacion,1', 'nullable', 'date',

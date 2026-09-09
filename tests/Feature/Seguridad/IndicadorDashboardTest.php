@@ -62,15 +62,15 @@ class IndicadorDashboardTest extends TestCase
 
         // 2 realizadas (1 positiva) dentro del rango + 1 fuera del rango.
         PruebaAlcoholemia::create([
-            'colaborador_id' => $colaborador->id, 'tipo' => 'pre_ruta', 'alcoholimetro_id' => $dispositivo->id,
+            'colaborador_id' => $colaborador->id, 'tipo' => 'ingreso', 'alcoholimetro_id' => $dispositivo->id,
             'resultado' => 0, 'estado' => 'realizada', 'fecha_hora' => now()->subDays(2), 'responsable_id' => $seguridad->id,
         ]);
         PruebaAlcoholemia::create([
-            'colaborador_id' => $colaborador->id, 'tipo' => 'ruta', 'alcoholimetro_id' => $dispositivo->id,
+            'colaborador_id' => $colaborador->id, 'tipo' => 'aleatoria', 'alcoholimetro_id' => $dispositivo->id,
             'resultado' => 0.3, 'estado' => 'realizada', 'fecha_hora' => now()->subDays(1), 'responsable_id' => $seguridad->id,
         ]);
         PruebaAlcoholemia::create([
-            'colaborador_id' => $colaborador->id, 'tipo' => 'ruta', 'alcoholimetro_id' => $dispositivo->id,
+            'colaborador_id' => $colaborador->id, 'tipo' => 'aleatoria', 'alcoholimetro_id' => $dispositivo->id,
             'resultado' => 0.9, 'estado' => 'realizada', 'fecha_hora' => now()->subYear(), 'responsable_id' => $seguridad->id,
         ]);
 

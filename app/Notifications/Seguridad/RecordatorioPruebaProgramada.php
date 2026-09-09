@@ -8,9 +8,7 @@ use Illuminate\Notifications\Notification;
 
 class RecordatorioPruebaProgramada extends Notification
 {
-    public function __construct(private readonly PruebaAlcoholemia $prueba)
-    {
-    }
+    public function __construct(private readonly PruebaAlcoholemia $prueba) {}
 
     /**
      * @return array<int, string>
@@ -28,7 +26,7 @@ class RecordatorioPruebaProgramada extends Notification
             ->subject('EASY LOGÍSTICA Seguridad: recordatorio de prueba programada')
             ->greeting('Tienes una prueba de alcoholemia programada')
             ->line("Colaborador: {$colaborador?->nombre_completo}")
-            ->line("Tipo: {$this->prueba->tipo}")
+            ->line("Tipo: {$this->prueba->tipoLabel()}")
             ->line('Programada para: '.$this->prueba->programada_en?->format('d/m/Y H:i'))
             ->action('Ver pruebas', route('seguridad.pruebas.index'))
             ->line('Este es un mensaje automático del Sistema Integral de Gestión EASY LOGÍSTICA.');

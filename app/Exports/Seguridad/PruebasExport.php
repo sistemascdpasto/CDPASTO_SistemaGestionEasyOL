@@ -3,23 +3,21 @@
 namespace App\Exports\Seguridad;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDrawings;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Events\AfterSheet;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, WithEvents, WithHeadings, WithMapping
 {
     private const FOTO_ROW_HEIGHT = 45;
 
-    public function __construct(private readonly Collection $pruebas)
-    {
-    }
+    public function __construct(private readonly Collection $pruebas) {}
 
     public function collection(): Collection
     {
@@ -28,7 +26,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
 
     public function headings(): array
     {
-        return ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'];
+        return ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'];
     }
 
     /**
@@ -41,6 +39,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
             $prueba->colaborador?->nombre_completo,
             $prueba->colaborador?->cedula,
             $prueba->tipoLabel(),
+            $prueba->turno ?? '—',
             $prueba->alcoholimetro?->codigo,
             $prueba->resultado,
             $prueba->estado === 'programada' ? '—' : $prueba->evaluacion(),
@@ -53,7 +52,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
 
     public function columnWidths(): array
     {
-        return ['J' => 18, 'K' => 18];
+        return ['K' => 18, 'L' => 18];
     }
 
     /**
@@ -66,8 +65,8 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
         foreach ($this->pruebas->values() as $index => $prueba) {
             $fila = $index + 2;
 
-            $this->agregarDrawing($drawings, $prueba->firma_path, "J{$fila}", 'Firma');
-            $this->agregarDrawing($drawings, $prueba->evidenciaPrincipalPath(), "K{$fila}", 'Evidencia principal');
+            $this->agregarDrawing($drawings, $prueba->firma_path, "K{$fila}", 'Firma');
+            $this->agregarDrawing($drawings, $prueba->evidenciaPrincipalPath(), "L{$fila}", 'Evidencia principal');
         }
 
         return $drawings;
@@ -82,7 +81,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
             return;
         }
 
-        $drawing = new Drawing();
+        $drawing = new Drawing;
         $drawing->setName($nombre);
         $drawing->setPath(Storage::disk('public')->path($path));
         $drawing->setHeight(self::FOTO_ROW_HEIGHT - 6);

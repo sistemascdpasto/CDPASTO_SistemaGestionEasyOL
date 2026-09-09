@@ -17,6 +17,7 @@ class PruebaAlcoholemia extends Model
         'colaborador_id',
         'alcoholimetro_id',
         'tipo',
+        'turno',
         'resultado',
         'consentimiento_aceptado',
         'consentimiento_en',
@@ -111,10 +112,10 @@ class PruebaAlcoholemia extends Model
     public function tipoLabel(): string
     {
         return match ($this->tipo) {
-            'pre_ruta' => 'Pre Ruta',
-            'ruta' => 'Ruta',
-            'post_ruta' => 'Post Ruta',
-            default => ucfirst($this->tipo),
+            'ingreso' => 'Ingreso',
+            'aleatoria' => 'Aleatoria',
+            'salida' => 'Salida',
+            default => ucfirst((string) $this->tipo),
         };
     }
 

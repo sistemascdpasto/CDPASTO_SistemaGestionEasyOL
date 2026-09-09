@@ -58,6 +58,7 @@ class PruebaAlcoholemiaController extends Controller
         $prueba = PruebaAlcoholemia::create([
             'colaborador_id' => $request->input('colaborador_id'),
             'tipo' => $request->input('tipo'),
+            'turno' => $request->input('turno'),
             'alcoholimetro_id' => $esProgramacion ? null : $request->input('alcoholimetro_id'),
             'resultado' => $esProgramacion ? null : $request->input('resultado'),
             'consentimiento_aceptado' => ! $esProgramacion && $request->boolean('consentimiento_aceptado'),
@@ -126,6 +127,7 @@ class PruebaAlcoholemiaController extends Controller
         $prueba->fill([
             'colaborador_id' => $request->input('colaborador_id'),
             'tipo' => $request->input('tipo'),
+            'turno' => $request->input('turno'),
             'alcoholimetro_id' => $esProgramacion ? null : $request->input('alcoholimetro_id'),
             'resultado' => $esProgramacion ? null : $request->input('resultado'),
             'consentimiento_aceptado' => ! $esProgramacion && $request->boolean('consentimiento_aceptado'),
@@ -210,6 +212,7 @@ class PruebaAlcoholemiaController extends Controller
                 'id' => $prueba->id,
                 'hora' => $prueba->programada_en->format('H:i'),
                 'tipo' => $prueba->tipo,
+                'turno' => $prueba->turno,
                 'colaborador' => $prueba->colaborador?->nombre_completo,
             ]));
 
@@ -246,6 +249,7 @@ class PruebaAlcoholemiaController extends Controller
             ->with(['colaborador:id,nombres,apellidos,cedula', 'alcoholimetro:id,codigo', 'responsable:id,name', 'evidencias'])
             ->when($filtros['estado'] !== '', fn ($query) => $query->where('estado', $filtros['estado']))
             ->when($filtros['tipo'] !== '', fn ($query) => $query->where('tipo', $filtros['tipo']))
+            ->when($filtros['turno'] !== '', fn ($query) => $query->where('turno', $filtros['turno']))
             ->when($filtros['fecha_desde'] !== '', fn ($query) => $query->whereDate('fecha_hora', '>=', $filtros['fecha_desde']))
             ->when($filtros['fecha_hasta'] !== '', fn ($query) => $query->whereDate('fecha_hora', '<=', $filtros['fecha_hasta']))
             ->when($filtros['colaborador'] !== '', function ($query) use ($filtros) {
@@ -265,6 +269,7 @@ class PruebaAlcoholemiaController extends Controller
         return [
             'estado' => $request->string('estado')->trim()->toString(),
             'tipo' => $request->string('tipo')->trim()->toString(),
+            'turno' => $request->string('turno')->trim()->toString(),
             'fecha_desde' => $request->string('fecha_desde')->trim()->toString(),
             'fecha_hasta' => $request->string('fecha_hasta')->trim()->toString(),
             'colaborador' => $request->string('colaborador')->trim()->toString(),

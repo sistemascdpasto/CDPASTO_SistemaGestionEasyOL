@@ -40,6 +40,7 @@ interface PruebaData {
     id: number;
     colaborador_id: number;
     tipo: string;
+    turno: string | null;
     es_programacion: boolean;
     programada_en: string | null;
     alcoholimetro_id: number | null;
@@ -57,6 +58,7 @@ interface PruebaData {
 interface PruebaForm {
     colaborador_id: string;
     tipo: string;
+    turno: string;
     es_programacion: boolean;
     programada_en: string;
     alcoholimetro_id: string;
@@ -185,12 +187,7 @@ function EvidenciaUploader({
                 )}
             </div>
             {onCaptureFile && (
-                <CameraCaptureDialog
-                    open={camaraAbierta}
-                    onOpenChange={setCamaraAbierta}
-                    onCapture={onCaptureFile}
-                    titulo="Evidencia fotográfica"
-                />
+                <CameraCaptureDialog open={camaraAbierta} onOpenChange={setCamaraAbierta} onCapture={onCaptureFile} titulo="Evidencia fotográfica" />
             )}
         </div>
     );
@@ -297,7 +294,8 @@ export default function CreatePrueba({
         : [...breadcrumbsBase, { title: 'Registrar prueba', href: '/modules/seguridad/pruebas/create' }];
     const { data, setData, post, processing, errors, transform } = useForm<PruebaForm>({
         colaborador_id: prueba?.colaborador_id ? String(prueba.colaborador_id) : '',
-        tipo: prueba?.tipo ?? 'pre_ruta',
+        tipo: prueba?.tipo ?? 'ingreso',
+        turno: prueba?.turno ?? '',
         es_programacion: prueba ? prueba.estado === 'programada' : false,
         programada_en: prueba?.programada_en ? String(prueba.programada_en) : '',
         alcoholimetro_id: prueba?.alcoholimetro_id ? String(prueba.alcoholimetro_id) : '',
@@ -480,12 +478,27 @@ export default function CreatePrueba({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="pre_ruta">Pre Ruta</SelectItem>
-                                        <SelectItem value="ruta">Ruta</SelectItem>
-                                        <SelectItem value="post_ruta">Post Ruta</SelectItem>
+                                        <SelectItem value="ingreso">Ingreso</SelectItem>
+                                        <SelectItem value="aleatoria">Aleatoria</SelectItem>
+                                        <SelectItem value="salida">Salida</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.tipo} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="turno">Turno</Label>
+                                <Select value={data.turno} onValueChange={(value) => setData('turno', value)}>
+                                    <SelectTrigger id="turno">
+                                        <SelectValue placeholder="Selecciona el turno" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="A">A</SelectItem>
+                                        <SelectItem value="B">B</SelectItem>
+                                        <SelectItem value="C">C</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.turno} />
                             </div>
                         </div>
 

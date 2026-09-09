@@ -7,12 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { CalendarDays, Eye, FileSpreadsheet, FileText, Pencil, Plus } from 'lucide-react';
-import { FormEventHandler, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -20,11 +20,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Pruebas de Alcoholemia', href: '/modules/seguridad/pruebas' },
 ];
 
-const TIPO_LABELS: Record<string, string> = { pre_ruta: 'Pre Ruta', ruta: 'Ruta', post_ruta: 'Post Ruta' };
+const TIPO_LABELS: Record<string, string> = { ingreso: 'Ingreso', aleatoria: 'Aleatoria', salida: 'Salida' };
 
 interface PruebaRow {
     id: number;
     tipo: string;
+    turno: string | null;
     resultado: string | null;
     es_positivo: boolean;
     estado: string;
@@ -49,6 +50,7 @@ interface PruebasPaginator {
 interface Filters {
     estado: string;
     tipo: string;
+    turno: string;
     fecha_desde: string;
     fecha_hasta: string;
     colaborador: string;
@@ -60,7 +62,10 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
     const isFirstRender = useRef(true);
 
     useEffect(() => {
-        if (isFirstRender.current) { isFirstRender.current = false; return; }
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         router.get(route('seguridad.pruebas.index'), { ...debouncedForm }, { preserveState: true, replace: true });
     }, [JSON.stringify(debouncedForm)]);
 
@@ -88,7 +93,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                     </div>
                 </div>
 
-                <form className="grid gap-3 rounded-lg border border-sidebar-border/70 p-4 sm:grid-cols-2 lg:grid-cols-5 dark:border-sidebar-border">
+                <form className="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-6">
                     <div className="grid gap-1.5">
                         <Label htmlFor="colaborador">Colaborador o cédula</Label>
                         <Input
@@ -100,11 +105,21 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                     </div>
                     <div className="grid gap-1.5">
                         <Label htmlFor="fecha_desde">Desde</Label>
-                        <Input id="fecha_desde" type="date" value={form.fecha_desde} onChange={(e) => setForm({ ...form, fecha_desde: e.target.value })} />
+                        <Input
+                            id="fecha_desde"
+                            type="date"
+                            value={form.fecha_desde}
+                            onChange={(e) => setForm({ ...form, fecha_desde: e.target.value })}
+                        />
                     </div>
                     <div className="grid gap-1.5">
                         <Label htmlFor="fecha_hasta">Hasta</Label>
-                        <Input id="fecha_hasta" type="date" value={form.fecha_hasta} onChange={(e) => setForm({ ...form, fecha_hasta: e.target.value })} />
+                        <Input
+                            id="fecha_hasta"
+                            type="date"
+                            value={form.fecha_hasta}
+                            onChange={(e) => setForm({ ...form, fecha_hasta: e.target.value })}
+                        />
                     </div>
                     <div className="grid gap-1.5">
                         <Label>Tipo</Label>
@@ -114,15 +129,32 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="todos">Todos</SelectItem>
-                                <SelectItem value="pre_ruta">Pre Ruta</SelectItem>
-                                <SelectItem value="ruta">Ruta</SelectItem>
-                                <SelectItem value="post_ruta">Post Ruta</SelectItem>
+                                <SelectItem value="ingreso">Ingreso</SelectItem>
+                                <SelectItem value="aleatoria">Aleatoria</SelectItem>
+                                <SelectItem value="salida">Salida</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                        <Label>Turno</Label>
+                        <Select value={form.turno || 'todos'} onValueChange={(value) => setForm({ ...form, turno: value === 'todos' ? '' : value })}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="todos">Todos</SelectItem>
+                                <SelectItem value="A">A</SelectItem>
+                                <SelectItem value="B">B</SelectItem>
+                                <SelectItem value="C">C</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="grid gap-1.5">
                         <Label>Estado</Label>
-                        <Select value={form.estado || 'todas'} onValueChange={(value) => setForm({ ...form, estado: value === 'todas' ? '' : value })}>
+                        <Select
+                            value={form.estado || 'todas'}
+                            onValueChange={(value) => setForm({ ...form, estado: value === 'todas' ? '' : value })}
+                        >
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
@@ -135,7 +167,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                         </Select>
                     </div>
 
-                    <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-5">
+                    <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-6">
                         <Button type="button" variant="outline" asChild>
                             <a href={exportUrl('seguridad.pruebas.exportar-pdf')}>
                                 <FileText className="size-4" />
@@ -151,13 +183,14 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                     </div>
                 </form>
 
-                <div className="rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                <div className="border-sidebar-border/70 dark:border-sidebar-border rounded-lg border">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Colaborador</TableHead>
                                 <TableHead>Tipo</TableHead>
+                                <TableHead>Turno</TableHead>
                                 <TableHead>Dispositivo</TableHead>
                                 <TableHead>Resultado</TableHead>
                                 <TableHead>Responsable</TableHead>
@@ -168,7 +201,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                         <TableBody>
                             {pruebas.data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-muted-foreground py-6 text-center">
+                                    <TableCell colSpan={9} className="text-muted-foreground py-6 text-center">
                                         No se encontraron pruebas.
                                     </TableCell>
                                 </TableRow>
@@ -180,6 +213,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                                         {prueba.colaborador ? `${prueba.colaborador.nombres} ${prueba.colaborador.apellidos}` : '—'}
                                     </TableCell>
                                     <TableCell>{TIPO_LABELS[prueba.tipo] ?? prueba.tipo}</TableCell>
+                                    <TableCell>{prueba.turno ?? '—'}</TableCell>
                                     <TableCell>{prueba.alcoholimetro?.codigo ?? '—'}</TableCell>
                                     <TableCell>
                                         {prueba.estado === 'programada' ? (
@@ -196,7 +230,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                                             <SafeImage
                                                 src={`/storage/${prueba.firma_path}`}
                                                 alt="Firma"
-                                                className="h-8 w-16 rounded border border-sidebar-border/70 bg-white object-contain dark:border-sidebar-border"
+                                                className="border-sidebar-border/70 dark:border-sidebar-border h-8 w-16 rounded border bg-white object-contain"
                                             />
                                         ) : (
                                             <span className="text-muted-foreground">—</span>

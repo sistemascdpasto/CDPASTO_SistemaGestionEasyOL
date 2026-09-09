@@ -10,6 +10,7 @@ import { FileText } from 'lucide-react';
 interface PruebaDetalle {
     id: number;
     tipo: string;
+    turno: string | null;
     resultado: string | null;
     es_positivo: boolean;
     estado: string;
@@ -32,7 +33,7 @@ const EVALUACION_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'
     'No Apto': 'destructive',
 };
 
-const TIPO_LABELS: Record<string, string> = { pre_ruta: 'Pre Ruta', ruta: 'Ruta', post_ruta: 'Post Ruta' };
+const TIPO_LABELS: Record<string, string> = { ingreso: 'Ingreso', aleatoria: 'Aleatoria', salida: 'Salida' };
 
 export default function PruebaShow({ prueba, qrSvg }: { prueba: PruebaDetalle; qrSvg: string | null }) {
     const breadcrumbs: BreadcrumbItem[] = [
@@ -66,9 +67,11 @@ export default function PruebaShow({ prueba, qrSvg }: { prueba: PruebaDetalle; q
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-3">
-                    <Card className="border-sidebar-border/70 lg:col-span-2 dark:border-sidebar-border">
+                    <Card className="border-sidebar-border/70 dark:border-sidebar-border lg:col-span-2">
                         <CardContent className="grid gap-3 p-6 text-sm sm:grid-cols-2">
                             <p>Cédula: {prueba.colaborador?.cedula ?? '—'}</p>
+                            <p>Tipo de prueba: {TIPO_LABELS[prueba.tipo] ?? prueba.tipo}</p>
+                            <p>Turno: {prueba.turno ? `Turno ${prueba.turno}` : '—'}</p>
                             <p>Dispositivo: {prueba.alcoholimetro?.codigo ?? '—'}</p>
                             <p>Resultado: {prueba.resultado ?? '—'}</p>
                             <p>Responsable: {prueba.responsable?.name ?? '—'}</p>
@@ -98,7 +101,7 @@ export default function PruebaShow({ prueba, qrSvg }: { prueba: PruebaDetalle; q
                         <SafeImage
                             src={`/storage/${prueba.firma_path}`}
                             alt="Firma del colaborador"
-                            className="rounded-lg border border-sidebar-border/70 bg-white dark:border-sidebar-border"
+                            className="border-sidebar-border/70 dark:border-sidebar-border rounded-lg border bg-white"
                         />
                     </div>
                 )}
@@ -112,7 +115,7 @@ export default function PruebaShow({ prueba, qrSvg }: { prueba: PruebaDetalle; q
                                     key={path}
                                     src={`/storage/${path}`}
                                     alt="Evidencia de la prueba"
-                                    className="h-32 w-32 rounded-lg border border-sidebar-border/70 object-cover dark:border-sidebar-border"
+                                    className="border-sidebar-border/70 dark:border-sidebar-border h-32 w-32 rounded-lg border object-cover"
                                 />
                             ))}
                         </div>
@@ -129,9 +132,9 @@ export default function PruebaShow({ prueba, qrSvg }: { prueba: PruebaDetalle; q
                                     href={`/storage/${path}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-2 rounded-lg border border-sidebar-border/70 bg-card px-3 py-2 text-sm text-foreground hover:underline dark:border-sidebar-border"
+                                    className="border-sidebar-border/70 bg-card text-foreground dark:border-sidebar-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:underline"
                                 >
-                                    <FileText className="size-4 shrink-0 text-muted-foreground" />
+                                    <FileText className="text-muted-foreground size-4 shrink-0" />
                                     <span className="max-w-[220px] truncate">{path.split('/').pop()}</span>
                                 </a>
                             ))}

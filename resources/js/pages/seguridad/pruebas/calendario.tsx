@@ -16,16 +16,14 @@ interface PruebaDelDia {
     id: number;
     hora: string;
     tipo: string;
+    turno: string | null;
     colaborador: string | null;
 }
 
-const TIPO_LABELS: Record<string, string> = { pre_ruta: 'Pre Ruta', ruta: 'Ruta', post_ruta: 'Post Ruta' };
+const TIPO_LABELS: Record<string, string> = { ingreso: 'Ingreso', aleatoria: 'Aleatoria', salida: 'Salida' };
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const MESES = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 export default function PruebasCalendario({ mes, pruebasPorDia }: { mes: string; pruebasPorDia: Record<string, PruebaDelDia[]> }) {
     const [anioStr, mesStr] = mes.split('-');
@@ -65,24 +63,24 @@ export default function PruebasCalendario({ mes, pruebasPorDia }: { mes: string;
                     </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-sidebar-border/70 bg-sidebar-border/70 dark:border-sidebar-border dark:bg-sidebar-border">
+                <div className="border-sidebar-border/70 bg-sidebar-border/70 dark:border-sidebar-border dark:bg-sidebar-border grid grid-cols-7 gap-px overflow-hidden rounded-lg border">
                     {DIAS_SEMANA.map((dia) => (
-                        <div key={dia} className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
+                        <div key={dia} className="bg-muted text-muted-foreground p-2 text-center text-xs font-medium">
                             {dia}
                         </div>
                     ))}
                     {celdas.map((dia, index) => (
-                        <div key={index} className="min-h-28 bg-background p-1.5">
+                        <div key={index} className="bg-background min-h-28 p-1.5">
                             {dia && (
                                 <>
-                                    <span className="text-xs text-muted-foreground">{dia}</span>
+                                    <span className="text-muted-foreground text-xs">{dia}</span>
                                     <div className="mt-1 flex flex-col gap-1">
                                         {(pruebasPorDia[fechaKey(dia)] ?? []).map((prueba) => (
                                             <Link
                                                 key={prueba.id}
                                                 href={route('seguridad.pruebas.show', prueba.id)}
-                                                className="truncate rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary hover:bg-primary/20"
-                                                title={`${prueba.hora} · ${prueba.colaborador} (${TIPO_LABELS[prueba.tipo] ?? prueba.tipo})`}
+                                                className="bg-primary/10 text-primary hover:bg-primary/20 truncate rounded px-1.5 py-0.5 text-xs"
+                                                title={`${prueba.hora} · ${prueba.colaborador} (${TIPO_LABELS[prueba.tipo] ?? prueba.tipo}${prueba.turno ? ` · Turno ${prueba.turno}` : ''})`}
                                             >
                                                 {prueba.hora} {prueba.colaborador}
                                             </Link>

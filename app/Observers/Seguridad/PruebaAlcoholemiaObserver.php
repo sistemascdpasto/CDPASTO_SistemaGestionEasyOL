@@ -16,7 +16,7 @@ class PruebaAlcoholemiaObserver
                 'colaborador_id' => $prueba->colaborador_id,
                 'alcoholimetro_id' => $prueba->alcoholimetro_id,
                 'prueba_alcoholemia_id' => $prueba->id,
-                'mensaje' => "{$prueba->colaborador->nombre_completo} registró un resultado positivo ({$prueba->resultado}) en la prueba de {$prueba->tipo}.",
+                'mensaje' => "{$prueba->colaborador->nombre_completo} registró un resultado positivo ({$prueba->resultado}) en la prueba de {$prueba->tipoLabel()}.",
             ]);
 
             AlertaNotifier::notificar($alerta);
@@ -30,7 +30,7 @@ class PruebaAlcoholemiaObserver
                 'colaborador_id' => $prueba->colaborador_id,
                 'alcoholimetro_id' => $prueba->alcoholimetro_id,
                 'prueba_alcoholemia_id' => $prueba->id,
-                'mensaje' => "{$prueba->colaborador->nombre_completo} fue evaluado como No Apto para laborar (prueba de {$prueba->tipo}).",
+                'mensaje' => "{$prueba->colaborador->nombre_completo} fue evaluado como No Apto para laborar (prueba de {$prueba->tipoLabel()}).",
             ]);
 
             AlertaNotifier::notificar($alerta);

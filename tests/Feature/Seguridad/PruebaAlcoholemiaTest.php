@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seguridad;
 
+use App\Exports\Seguridad\PruebasExport;
 use App\Models\Seguridad\Alcoholimetro;
 use App\Models\Seguridad\Colaborador;
 use App\Models\Seguridad\PruebaAlcoholemia;
@@ -69,7 +70,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => true,
@@ -90,7 +92,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => true,
@@ -109,7 +112,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => false,
@@ -129,7 +133,8 @@ class PruebaAlcoholemiaTest extends TestCase
         // al programar — no debe bloquear el guardado.
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'es_programacion' => '1',
             'programada_en' => now()->addDay()->format('Y-m-d\TH:i'),
             'consentimiento_aceptado' => '0',
@@ -150,7 +155,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'post_ruta',
+            'tipo' => 'salida',
+            'turno' => 'C',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => true,
@@ -159,7 +165,8 @@ class PruebaAlcoholemiaTest extends TestCase
         $response->assertRedirect(route('seguridad.pruebas.index'));
         $this->assertDatabaseHas('pruebas_alcoholemia', [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'post_ruta',
+            'tipo' => 'salida',
+            'turno' => 'C',
         ]);
     }
 
@@ -171,7 +178,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'entrada',
+            'tipo' => 'pre_ruta',
+            'turno' => 'A',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => true,
@@ -180,12 +188,34 @@ class PruebaAlcoholemiaTest extends TestCase
         $response->assertSessionHasErrors('tipo');
     }
 
+    public function test_it_requires_a_valid_turno(): void
+    {
+        $user = $this->seguridadUser();
+        $colaborador = $this->colaborador();
+        $dispositivo = $this->alcoholimetro();
+
+        $base = [
+            'colaborador_id' => $colaborador->id,
+            'tipo' => 'ingreso',
+            'alcoholimetro_id' => $dispositivo->id,
+            'resultado' => '0.000',
+            'consentimiento_aceptado' => true,
+        ];
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $base)
+            ->assertSessionHasErrors('turno');
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), [...$base, 'turno' => 'D'])
+            ->assertSessionHasErrors('turno');
+    }
+
     public function test_evidencia_principal_path_finds_the_image_regardless_of_upload_order(): void
     {
         $colaborador = $this->colaborador();
         $prueba = PruebaAlcoholemia::create([
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'consentimiento_aceptado' => true,
             'responsable_id' => $this->seguridadUser()->id,
             'fecha_hora' => now(),
@@ -205,7 +235,8 @@ class PruebaAlcoholemiaTest extends TestCase
         $colaborador = $this->colaborador();
         $prueba = PruebaAlcoholemia::create([
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'consentimiento_aceptado' => true,
             'responsable_id' => $this->seguridadUser()->id,
             'fecha_hora' => now(),
@@ -226,7 +257,8 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'B',
             'alcoholimetro_id' => $dispositivo->id,
             'resultado' => '0.000',
             'consentimiento_aceptado' => true,
@@ -248,7 +280,8 @@ class PruebaAlcoholemiaTest extends TestCase
         $colaborador = $this->colaborador();
         $prueba = PruebaAlcoholemia::create([
             'colaborador_id' => $colaborador->id,
-            'tipo' => 'pre_ruta',
+            'tipo' => 'ingreso',
+            'turno' => 'A',
             'consentimiento_aceptado' => true,
             'responsable_id' => $this->seguridadUser()->id,
             'fecha_hora' => now(),
@@ -259,15 +292,15 @@ class PruebaAlcoholemiaTest extends TestCase
         $prueba->evidencias()->create(['path' => 'evidencias/soporte.pdf']);
         $prueba->evidencias()->create(['path' => 'evidencias/foto.jpg']);
 
-        $export = new \App\Exports\Seguridad\PruebasExport(collect([$prueba]));
+        $export = new PruebasExport(collect([$prueba]));
 
         $this->assertSame(
-            ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'],
+            ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'],
             $export->headings()
         );
 
         $fila = $export->map($prueba);
-        $this->assertCount(11, $fila);
+        $this->assertCount(12, $fila);
         $this->assertSame('', end($fila));
     }
 }
