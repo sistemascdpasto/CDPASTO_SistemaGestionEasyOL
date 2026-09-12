@@ -1,9 +1,10 @@
 ﻿import { FileIcon, getFileCategoryInfo } from '@/components/capacitaciones/file-icon';
+import { NotificationsBell } from '@/components/notifications-bell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import AppLayoutNoHeader from '@/layouts/app-layout-no-header';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -183,9 +184,6 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
 
     return (
         <section className="space-y-3">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                <span>🎬</span> Contenido Multimedia
-            </h2>
 
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-md mx-auto w-full max-w-2xl"
                  style={{ aspectRatio: '16/9' }}>
@@ -193,13 +191,8 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
                 {/* Media */}
                 <div className="absolute inset-0">{renderMedia()}</div>
 
-                {/* Gradient inferior con título */}
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <p className="text-sm font-semibold text-white drop-shadow line-clamp-1">{item.titulo}</p>
-                    {item.carpeta && (
-                        <p className="text-xs text-white/60">{item.carpeta.nombre}</p>
-                    )}
-                </div>
+                {/* Gradient inferior — sin título */}
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-12" />
 
                 {/* Flechas — solo si hay más de 1 */}
                 {total > 1 && (
@@ -382,7 +375,7 @@ export default function CentroCapacitacionesIndex({
     const totalRevisados  = carpetas.reduce((s, c) => s + c.revisados_count, 0);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayoutNoHeader>
             <Head title="Centro de Capacitaciones" />
 
             {/* ── WRAPPER que envuelve toda la página ── */}
@@ -405,6 +398,12 @@ export default function CentroCapacitacionesIndex({
                     ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d2240] to-[#0a3320]" />
                     )}
+
+                    {/* ── Barra superior: sidebar trigger + notificaciones ── */}
+                    <div className="relative z-20 flex items-center justify-between px-4 pt-3 sm:px-6">
+                        <SidebarTrigger className="text-white/70 hover:text-white hover:bg-white/10 rounded-md p-1.5" />
+                        <NotificationsBell />
+                    </div>
                     {/* Destellos decorativos */}
                     <div className="absolute -top-20 right-1/3 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
                     <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-teal-400/5 blur-3xl" />
@@ -525,8 +524,8 @@ export default function CentroCapacitacionesIndex({
                 {/* ══════════════════════════════════════════
                     CONTENIDO PRINCIPAL — sube y tapa el hero
                 ══════════════════════════════════════════ */}
-                <div className="relative z-10 -mt-8 rounded-t-3xl bg-white shadow-2xl">
-                <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
+                <div className="relative z-10 -mt-8 bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+                <div className="mx-auto max-w-7xl space-y-12 px-4 pt-10 pb-10 sm:px-6">
 
                     {/* Resultados de búsqueda global */}
                     {resultadosBusqueda !== null && (
@@ -693,6 +692,6 @@ export default function CentroCapacitacionesIndex({
                 </div>
                 </div>
             </div>
-        </AppLayout>
+        </AppLayoutNoHeader>
     );
 }
