@@ -77,11 +77,39 @@ class IncentivosImportService
 
             $resultado['archivos_procesados']++;
 
-            $filas       = $hoja->toArray(null, true, true, true);
-            $encabezados = array_shift($filas) ?? [];
+            $filas = $hoja->toArray(null, true, true, true);
+
+            // Buscar la fila que contiene los encabezados reales (la que tenga 'Cedula' o 'Mes')
+            // porque el Excel puede tener filas de título antes de los encabezados.
+            $encabezados  = [];
+            $filasDatos   = [];
+            $encontrado   = false;
+
+            foreach ($filas as $idx => $fila) {
+                if (! $encontrado) {
+                    foreach ($fila as $celda) {
+                        $norm = $this->normalizar((string) ($celda ?? ''));
+                        if ($norm === 'CEDULA' || $norm === 'MES') {
+                            $encabezados = $fila;
+                            $encontrado  = true;
+                            break;
+                        }
+                    }
+                } else {
+                    $filasDatos[$idx] = $fila;
+                }
+            }
+
+            if (! $encontrado) {
+                Log::warning("Importación de Incentivos: no se encontró fila de encabezados con 'Mes' o 'Cedula'.");
+                $resultado['errores']++;
+                continue;
+            }
+
+            Log::info('Incentivos encabezados encontrados: ' . json_encode(array_values($encabezados)));
             $mapaColumnas = $this->resolverMapaColumnas($encabezados);
 
-            foreach ($filas as $numeroFila => $fila) {
+            foreach ($filasDatos as $numeroFila => $fila) {
                 $this->procesarFila($fila, $mapaColumnas, $numeroFila, $resultado);
             }
         }
@@ -92,7 +120,16 @@ class IncentivosImportService
     private function procesarFila(array $fila, array $mapaColumnas, int|string $numeroFila, array &$resultado): void
     {
         $valores = $this->extraerValoresPorCampo($fila, $mapaColumnas);
-        $cedula  = trim((string) ($valores['cedula'] ?? ''));
+
+        // La cédula puede venir como número flotante desde Excel (ej: 1233191710.0)
+        // Se convierte a entero string para que coincida con la BD.
+        $cedulaCruda = $valores['cedula'] ?? '';
+        if (is_numeric($cedulaCruda)) {
+            $cedulaCruda = (string) (int) $cedulaCruda;
+        }
+        $cedula = trim((string) $cedulaCruda);
+
+        Log::info("Incentivos fila {$numeroFila}: cedula=[{$cedula}] mapa=" . json_encode(array_keys(array_filter($valores, fn($v) => $v !== null))));
 
         if ($cedula === '') {
             return;

@@ -1,21 +1,24 @@
 ﻿import { FileIcon, getFileCategoryInfo } from '@/components/capacitaciones/file-icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowRight,
+    BookOpen,
     CheckCircle2,
+    ChevronRight,
     Clock,
-    Download,
-    ExternalLink,
-    Folder,
     GraduationCap,
+    Rocket,
     Search,
     Star,
+    Target,
+    TrendingUp,
+    Users,
+    X,
 } from 'lucide-react';
 import { FormEventHandler, useMemo, useState } from 'react';
 
@@ -46,11 +49,7 @@ interface MaterialItem {
     archivo_url?: string | null;
     enlace_externo: string | null;
     revisada?: boolean;
-    carpeta: {
-        id: number;
-        nombre: string;
-        color: string | null;
-    } | null;
+    carpeta: { id: number; nombre: string; color: string | null } | null;
     revisada_humano?: string;
 }
 
@@ -60,12 +59,97 @@ interface ProgresoGeneral {
     porcentaje_general: number;
 }
 
+// ── Tarjeta de carpeta/curso ───────────────────────────────────────────────
+function CursoCard({ carpeta }: { carpeta: CarpetaProgreso }) {
+    const color = carpeta.color || '#0D9488';
+    const pct   = carpeta.porcentaje;
+
+    return (
+        <Link
+            href={route('portal.capacitaciones.carpetas.show', carpeta.id)}
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm
+                       transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:shadow-xl hover:shadow-emerald-900/20"
+        >
+            {/* Imagen de portada o color sólido */}
+            <div className="relative h-36 overflow-hidden">
+                {carpeta.portada_url ? (
+                    <>
+                        <img
+                            src={carpeta.portada_url}
+                            alt={carpeta.nombre}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    </>
+                ) : (
+                    <div
+                        className="h-full w-full"
+                        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}44)` }}
+                    />
+                )}
+
+                {/* Badge de completada */}
+                {carpeta.completada && (
+                    <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                        <CheckCircle2 className="size-3" /> Completado
+                    </span>
+                )}
+
+                {/* Icono de categoría */}
+                <div
+                    className="absolute bottom-2 left-3 flex size-9 items-center justify-center rounded-xl shadow-md"
+                    style={{ backgroundColor: color }}
+                >
+                    <BookOpen className="size-4 text-white" />
+                </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="flex flex-1 flex-col gap-3 p-4">
+                <div>
+                    <h3 className="line-clamp-1 font-bold text-white transition-colors group-hover:text-emerald-300">
+                        {carpeta.nombre}
+                    </h3>
+                    {carpeta.descripcion && (
+                        <p className="mt-1 line-clamp-2 text-xs text-white/60">{carpeta.descripcion}</p>
+                    )}
+                </div>
+
+                {/* Progreso */}
+                <div className="mt-auto space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                        <span>{carpeta.revisados_count} / {carpeta.total_materiales} revisados</span>
+                        <span className="font-bold text-white/80">{pct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                                width: `${pct}%`,
+                                backgroundColor: carpeta.completada ? '#10b981' : color,
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* CTA */}
+                <div className="flex items-center justify-between pt-1 text-xs font-semibold text-emerald-400">
+                    <span>{carpeta.completada ? 'Repasar' : pct > 0 ? 'Continuar' : 'Comenzar'}</span>
+                    <ChevronRight className="size-4 transition-transform group-hover:translate-x-1" />
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+// ── Componente principal ───────────────────────────────────────────────────
 export default function CentroCapacitacionesIndex({
     carpetas,
     progreso,
     destacadas,
     recientes,
     resultadosBusqueda,
+    portalConfig,
     filters,
 }: {
     carpetas: CarpetaProgreso[];
@@ -73,6 +157,7 @@ export default function CentroCapacitacionesIndex({
     destacadas: MaterialItem[];
     recientes: MaterialItem[];
     resultadosBusqueda: MaterialItem[] | null;
+    portalConfig?: { titulo_hero: string; subtitulo_hero: string | null; imagen_hero_url: string | null };
     filters: { buscar?: string };
 }) {
     const [busqueda, setBusqueda] = useState(filters.buscar || '');
@@ -88,443 +173,322 @@ export default function CentroCapacitacionesIndex({
         router.get(route('portal.capacitaciones.index'), {}, { preserveState: true, replace: true });
     };
 
-    // Filtrado en vivo sobre carpetas
     const carpetasFiltradas = useMemo(() => {
-        if (!busqueda.trim()) return carpetas;
-        const query = busqueda.toLowerCase();
-        return carpetas.filter(
-            (c) => 
-                c.nombre.toLowerCase().includes(query) || 
-                (c.descripcion && c.descripcion.toLowerCase().includes(query))
+        if (!busqueda.trim() || resultadosBusqueda !== null) return carpetas;
+        const q = busqueda.toLowerCase();
+        return carpetas.filter((c) =>
+            c.nombre.toLowerCase().includes(q) || c.descripcion?.toLowerCase().includes(q),
         );
-    }, [carpetas, busqueda]);
+    }, [carpetas, busqueda, resultadosBusqueda]);
+
+    // Stats dinámicas
+    const totalMateriales = carpetas.reduce((s, c) => s + c.total_materiales, 0);
+    const totalRevisados  = carpetas.reduce((s, c) => s + c.revisados_count, 0);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Centro de Capacitaciones" />
 
-            <div className="flex h-full flex-1 flex-col gap-8 rounded-xl p-4 md:p-6 max-w-7xl mx-auto w-full">
-                {/* 1. ENCABEZADO Y BUSCADOR DINAMICO EN TIEMPO REAL */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-900 p-6 md:p-8 text-white shadow-lg">
-                    <div className="relative z-10 max-w-3xl space-y-3">
-                        <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-md">
-                            <GraduationCap className="size-4 text-teal-300" />
-                            <span>Portal de Aprendizaje</span>
-                        </div>
-                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-                             MI CENTRO DE CAPACITACIONES
-                        </h1>
-                        <p className="text-teal-100 text-sm md:text-base">
-                            Aprende y consulta el material disponible para tu desarrollo y seguridad laboral.
-                        </p>
+            {/* ── WRAPPER OSCURO que envuelve toda la página ── */}
+            <div className="min-h-screen bg-[#0a1628] text-white">
 
-                        {/* Buscador dinámico que busca a medida que escribe */}
-                        <form onSubmit={handleBuscar} className="pt-3">
-                            <div className="flex flex-col sm:flex-row gap-2 max-w-2xl">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Que estas buscando? (filtrar carpetas, temas o materiales en vivo...)"
-                                        value={busqueda}
-                                        onChange={(e) => setBusqueda(e.target.value)}
-                                        className="pl-10 h-11 bg-white text-foreground placeholder:text-muted-foreground/80 rounded-xl shadow-inner border-0 focus-visible:ring-2 focus-visible:ring-teal-400"
-                                    />
+                {/* ══════════════════════════════════════════
+                    HERO — imagen de fondo + texto + estadísticas
+                ══════════════════════════════════════════ */}
+                <div className="relative overflow-hidden">
+                    {/* Imagen de fondo del admin o gradiente por defecto */}
+                    {portalConfig?.imagen_hero_url ? (
+                        <>
+                            <img
+                                src={portalConfig.imagen_hero_url}
+                                alt="Hero capacitaciones"
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628]/90 via-[#0d2240]/80 to-[#0a3320]/70" />
+                        </>
+                    ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d2240] to-[#0a3320]" />
+                    )}
+                    {/* Destellos decorativos */}
+                    <div className="absolute -top-20 right-1/3 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
+                    <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-teal-400/5 blur-3xl" />
+
+                    <div className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
+                        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+
+                            {/* Columna izquierda: texto */}
+                            <div className="space-y-6">
+                                {/* Chip */}
+                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+                                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Portal de Aprendizaje
+                                </span>
+
+                                {/* Título */}
+                                <div>
+                                    <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                                        {portalConfig?.titulo_hero ?? 'Atraemos talento, desarrollamos potencial.'}
+                                    </h1>
+                                    <p className="mt-4 max-w-lg text-sm text-white/60 sm:text-base">
+                                        {portalConfig?.subtitulo_hero ?? 'Capacitaciones certificadas para el crecimiento profesional de tu equipo. Aprende a tu ritmo, avanza con propósito.'}
+                                    </p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        type="submit"
-                                        className="h-11 px-5 bg-teal-500 hover:bg-teal-400 text-teal-950 font-semibold rounded-xl shadow-md transition-transform active:scale-95"
-                                    >
-                                        Buscar global
-                                    </Button>
-                                    {busqueda && (
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={limpiarBusqueda}
-                                            className="h-11 px-4 bg-white/20 hover:bg-white/30 text-white border-0 rounded-xl"
-                                        >
-                                            Limpiar
+
+                                {/* CTA + Buscador */}
+                                <div className="space-y-3">
+                                    <form onSubmit={handleBuscar} className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
+                                            <Input
+                                                placeholder="Buscar cursos, temas…"
+                                                value={busqueda}
+                                                onChange={(e) => setBusqueda(e.target.value)}
+                                                className="h-11 border-white/10 bg-white/10 pl-9 pr-4 text-white placeholder:text-white/40 focus-visible:ring-emerald-500"
+                                            />
+                                        </div>
+                                        <Button type="submit" className="h-11 bg-emerald-500 px-5 font-bold text-white hover:bg-emerald-400">
+                                            Buscar
                                         </Button>
-                                    )}
+                                        {busqueda && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={limpiarBusqueda}
+                                                className="h-11 px-3 text-white/60 hover:text-white"
+                                            >
+                                                <X className="size-4" />
+                                            </Button>
+                                        )}
+                                    </form>
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <Link
+                                            href="#cursos"
+                                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-400 hover:shadow-lg hover:shadow-emerald-500/30"
+                                        >
+                                            <Rocket className="size-4" /> Explorar cursos →
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                {/* Stats en fila */}
+                                <div className="flex flex-wrap gap-4 pt-2">
+                                    {[
+                                        { icon: GraduationCap, label: 'Módulos disponibles', value: totalMateriales },
+                                        { icon: CheckCircle2,   label: 'Revisados',            value: totalRevisados },
+                                        { icon: Target,         label: 'Tu avance',            value: `${progreso.porcentaje_general}%` },
+                                        { icon: Star,           label: 'Destacados',           value: destacadas.length },
+                                    ].map((stat) => (
+                                        <div key={stat.label} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-sm">
+                                            <stat.icon className="size-4 text-emerald-400" />
+                                            <div>
+                                                <p className="text-lg font-extrabold leading-none text-white">{stat.value}</p>
+                                                <p className="text-[10px] text-white/50">{stat.label}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        </form>
-                    </div>
 
-                    <div className="absolute right-0 top-0 -mt-10 -mr-10 size-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+                            {/* Columna derecha: tarjetas flotantes decorativas + progreso */}
+                            <div className="hidden lg:flex flex-col items-end gap-4">
+                                {/* Barra de progreso general */}
+                                <div className="w-72 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <p className="text-sm font-bold text-white">Mi Progreso General</p>
+                                        <TrendingUp className="size-4 text-emerald-400" />
+                                    </div>
+                                    <div className="mb-2 flex items-end gap-1">
+                                        <span className="text-4xl font-extrabold text-emerald-400">{progreso.porcentaje_general}%</span>
+                                        <span className="mb-1 text-xs text-white/50">completado</span>
+                                    </div>
+                                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-700"
+                                            style={{ width: `${progreso.porcentaje_general}%` }}
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-xs text-white/40">
+                                        {progreso.categorias_completadas} de {progreso.total_categorias} categorías completadas
+                                    </p>
+                                </div>
+
+                                {/* Chip decorativo */}
+                                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                                    <Users className="size-5 text-teal-400" />
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Equipos más fuertes</p>
+                                        <p className="text-xs text-white/50">Aprende con tu equipo</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* RESULTADOS DE BÚSQUEDA GLOBAL DEL BACKEND (Si se envió el formulario de búsqueda) */}
-                {resultadosBusqueda !== null && (
-                    <div className="space-y-4 rounded-xl border border-teal-200 bg-teal-50/40 p-5 dark:border-teal-900/50 dark:bg-teal-950/20">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                                <Search className="size-4 text-teal-600 dark:text-teal-400" />
-                                Capacitaciones encontradas para "{busqueda}" ({resultadosBusqueda.length})
-                            </h2>
-                            <Button variant="ghost" size="sm" onClick={limpiarBusqueda} className="text-xs">
-                                Ver todas las categorias
-                            </Button>
-                        </div>
+                {/* ══════════════════════════════════════════
+                    CONTENIDO PRINCIPAL
+                ══════════════════════════════════════════ */}
+                <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
 
-                        {resultadosBusqueda.length === 0 ? (
-                            <p className="text-sm text-muted-foreground py-4 text-center">
-                                No se encontraron capacitaciones individuales que coincidan con tu busqueda.
-                            </p>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                {resultadosBusqueda.map((mat) => {
-                                    const catInfo = getFileCategoryInfo(mat.tipo);
-                                    return (
-                                        <Card key={mat.id} className="border-sidebar-border/70 overflow-hidden hover:shadow-sm bg-card">
-                                            <CardContent className="p-4 space-y-3">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className={`flex size-10 items-center justify-center rounded-lg ${catInfo.bgColor}`}>
-                                                        <FileIcon tipo={mat.tipo} className="size-5" />
-                                                    </div>
-                                                    {mat.revisada ? (
-                                                        <Badge variant="outline" className="text-xs text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800">
-                                                            <CheckCircle2 className="size-3 mr-1" /> Revisada
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            Pendiente
-                                                        </Badge>
-                                                    )}
+                    {/* Resultados de búsqueda global */}
+                    {resultadosBusqueda !== null && (
+                        <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="flex items-center gap-2 font-bold text-white">
+                                    <Search className="size-4 text-emerald-400" />
+                                    {resultadosBusqueda.length} resultado(s) para "{busqueda}"
+                                </h2>
+                                <Button variant="ghost" size="sm" onClick={limpiarBusqueda} className="text-white/60 hover:text-white">
+                                    Ver todos
+                                </Button>
+                            </div>
+                            {resultadosBusqueda.length === 0 ? (
+                                <p className="py-4 text-center text-sm text-white/40">No se encontraron capacitaciones.</p>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {resultadosBusqueda.map((mat) => {
+                                        const ci = getFileCategoryInfo(mat.tipo);
+                                        return (
+                                            <div key={mat.id} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                                                <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${ci.bgColor}`}>
+                                                    <FileIcon tipo={mat.tipo} className="size-5" />
                                                 </div>
-
-                                                <div>
-                                                    <h3 className="font-semibold text-sm line-clamp-1">{mat.titulo}</h3>
-                                                    {mat.descripcion && (
-                                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{mat.descripcion}</p>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                                                    <span className="font-medium text-teal-600 dark:text-teal-400">
-                                                         {mat.carpeta?.nombre}
-                                                    </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate font-semibold text-white text-sm">{mat.titulo}</p>
                                                     {mat.carpeta && (
                                                         <Link
                                                             href={route('portal.capacitaciones.carpetas.show', mat.carpeta.id)}
-                                                            className="text-xs font-semibold hover:underline flex items-center gap-1"
+                                                            className="mt-1 flex items-center gap-1 text-xs text-emerald-400 hover:underline"
                                                         >
-                                                            Abrir <ArrowRight className="size-3" />
+                                                            {mat.carpeta.nombre} <ArrowRight className="size-3" />
                                                         </Link>
                                                     )}
                                                 </div>
-                                            </CardContent>
-                                        </Card>
+                                                {mat.revisada && <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
+                    )}
+
+                    {/* Destacadas */}
+                    {destacadas.length > 0 && (
+                        <section className="space-y-4">
+                            <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                                <Star className="size-5 fill-amber-400 text-amber-400" />
+                                Capacitaciones Destacadas
+                            </h2>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {destacadas.map((d) => {
+                                    const ci = getFileCategoryInfo(d.tipo);
+                                    return (
+                                        <div
+                                            key={d.id}
+                                            className="group relative overflow-hidden rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 transition-all hover:border-amber-400/40 hover:shadow-lg hover:shadow-amber-900/10"
+                                        >
+                                            <div className="mb-3 flex items-start justify-between">
+                                                <div className={`flex size-11 items-center justify-center rounded-xl ${ci.bgColor}`}>
+                                                    <FileIcon tipo={d.tipo} className="size-6" />
+                                                </div>
+                                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                                                    Destacada
+                                                </span>
+                                            </div>
+                                            <h3 className="line-clamp-1 font-bold text-white group-hover:text-amber-300 transition-colors">
+                                                {d.titulo}
+                                            </h3>
+                                            {d.descripcion && (
+                                                <p className="mt-1 line-clamp-2 text-xs text-white/50">{d.descripcion}</p>
+                                            )}
+                                            {d.carpeta && (
+                                                <Link
+                                                    href={route('portal.capacitaciones.carpetas.show', d.carpeta.id)}
+                                                    className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:underline"
+                                                >
+                                                    {d.carpeta.nombre} <ArrowRight className="size-3" />
+                                                </Link>
+                                            )}
+                                        </div>
                                     );
                                 })}
                             </div>
-                        )}
-                    </div>
-                )}
+                        </section>
+                    )}
 
-                {/* 2. SECCIÓN: MIS CAPACITACIONES - PROGRESO GENERAL */}
-                <Card className="border-teal-500/30 bg-gradient-to-r from-card to-teal-500/5 shadow-sm">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="space-y-1.5">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                         MIS CAPACITACIONES
-                                    </h2>
-                                    {progreso.porcentaje_general === 100 && (
-                                        <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">
-                                            100% Completado!
-                                        </Badge>
-                                    )}
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    Has completado{' '}
-                                    <span className="font-bold text-foreground">
-                                        {progreso.categorias_completadas} de {progreso.total_categorias}
-                                    </span>{' '}
-                                    categorias
+                    {/* Catálogo de cursos */}
+                    <section id="cursos" className="space-y-5 scroll-mt-8">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-white">
+                                Explora por Categoría
+                                <span className="ml-2 text-sm font-normal text-white/40">({carpetasFiltradas.length})</span>
+                            </h2>
+                        </div>
+
+                        {carpetasFiltradas.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-16 text-center">
+                                <BookOpen className="size-12 text-white/20" />
+                                <p className="mt-4 text-base font-medium text-white/60">
+                                    {busqueda ? 'Sin coincidencias' : 'No hay categorías disponibles'}
+                                </p>
+                                <p className="mt-1 text-sm text-white/30">
+                                    {busqueda ? 'Intenta otra búsqueda.' : 'El equipo administrativo publicará módulos próximamente.'}
                                 </p>
                             </div>
-
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-3xl md:text-4xl font-extrabold text-teal-600 dark:text-teal-400">
-                                    {progreso.porcentaje_general}%
-                                </span>
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                                    Progreso global
-                                </span>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {carpetasFiltradas.map((carpeta) => (
+                                    <CursoCard key={carpeta.id} carpeta={carpeta} />
+                                ))}
                             </div>
-                        </div>
+                        )}
+                    </section>
 
-                        {/* Barra de progreso dinámica */}
-                        <div className="mt-4 space-y-1.5">
-                            <div className="h-3.5 w-full overflow-hidden rounded-full bg-muted/80 p-0.5 shadow-inner">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500 shadow-sm"
-                                    style={{ width: `${progreso.porcentaje_general}%` }}
-                                />
-                            </div>
-                            <div className="flex justify-between text-[11px] text-muted-foreground font-medium">
-                                <span>0% Inicio</span>
-                                <span>50% En avance</span>
-                                <span>100% Completado</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 3. SECCIÓN: CAPACITACIONES DESTACADAS */}
-                {destacadas.length > 0 && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <Star className="size-5 text-amber-500 fill-amber-500" />
-                            <h2 className="text-base font-bold uppercase tracking-wider text-foreground">
-                                Capacitaciones Destacadas
+                    {/* Recientes */}
+                    {recientes.length > 0 && (
+                        <section className="space-y-4 pb-10">
+                            <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                                <Clock className="size-5 text-teal-400" />
+                                Consultados Recientemente
                             </h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {destacadas.map((destacada) => {
-                                const catInfo = getFileCategoryInfo(destacada.tipo);
-                                return (
-                                    <Card
-                                        key={destacada.id}
-                                        className="group relative overflow-hidden border-amber-500/30 bg-gradient-to-b from-card to-amber-500/5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
-                                    >
-                                        <CardContent className="p-5 space-y-3">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className={`flex size-11 items-center justify-center rounded-xl ${catInfo.bgColor}`}>
-                                                    <FileIcon tipo={destacada.tipo} className="size-6" />
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {recientes.map((r) => {
+                                    const ci = getFileCategoryInfo(r.tipo);
+                                    return (
+                                        <div
+                                            key={r.id}
+                                            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-teal-500/30 hover:bg-white/8"
+                                        >
+                                            <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${ci.bgColor}`}>
+                                                <FileIcon tipo={r.tipo} className="size-5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-semibold text-white">{r.titulo}</p>
+                                                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-white/40">
+                                                    {r.carpeta && (
+                                                        <span className="text-teal-400">{r.carpeta.nombre}</span>
+                                                    )}
+                                                    {r.carpeta && <span>·</span>}
+                                                    <span>{r.revisada_humano}</span>
                                                 </div>
-                                                <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-xs">
-                                                    Destacada
-                                                </Badge>
                                             </div>
-
-                                            <div>
-                                                <h3 className="font-bold text-foreground line-clamp-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                                    {destacada.titulo}
-                                                </h3>
-                                                {destacada.descripcion && (
-                                                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                                        {destacada.descripcion}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/60">
-                                                <span className="font-medium text-foreground/80">
-                                                     {destacada.carpeta?.nombre}
-                                                </span>
-                                                {destacada.carpeta && (
-                                                    <Link
-                                                        href={route('portal.capacitaciones.carpetas.show', destacada.carpeta.id)}
-                                                        className="font-semibold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
-                                                    >
-                                                        Ir a material ?
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* 4. SECCIÓN: PROGRESO INDIVIDUAL - EXPLORA POR CATEGORÍA CON FOTOS DE PORTADA */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-base font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                             Explora por Categoría ({carpetasFiltradas.length})
-                        </h2>
-                    </div>
-
-                    {carpetasFiltradas.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-sidebar-border/80 p-12 text-center">
-                            <div className="flex size-14 items-center justify-center rounded-full bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
-                                <Folder className="size-7" />
-                            </div>
-                            <h3 className="mt-4 text-base font-medium text-foreground">
-                                {busqueda ? 'No hay categorías que coincidan con tu búsqueda' : 'No hay categorías disponibles'}
-                            </h3>
-                            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-                                {busqueda ? 'Intenta buscar con otra palabra clave.' : 'El equipo administrativo publicará los módulos de capacitación próximamente.'}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {carpetasFiltradas.map((carpeta) => {
-                                const folderColor = carpeta.color || '#0D9488';
-                                return (
-                                    <Card
-                                        key={carpeta.id}
-                                        className="group relative flex flex-col justify-between overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border-sidebar-border/70 dark:border-sidebar-border bg-card"
-                                    >
-                                        {/* Foto de Portada o Barra de Color */}
-                                        {carpeta.portada_url ? (
-                                            <div className="relative h-64 w-full overflow-hidden bg-muted">
-                                                <img
-                                                    src={carpeta.portada_url}
-                                                    alt={carpeta.nombre}
-                                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                                                <div
-                                                    className="absolute bottom-2.5 left-3 size-9 rounded-lg flex items-center justify-center shadow-md"
-                                                    style={{ backgroundColor: folderColor, color: '#ffffff' }}
+                                            {r.carpeta && (
+                                                <Link
+                                                    href={route('portal.capacitaciones.carpetas.show', r.carpeta.id)}
+                                                    className="shrink-0 rounded-lg border border-white/10 p-1.5 text-white/40 transition-all hover:border-teal-500/40 hover:text-teal-400"
                                                 >
-                                                    <Folder className="size-5 fill-current" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className="h-2 w-full"
-                                                style={{ backgroundColor: folderColor }}
-                                            />
-                                        )}
-
-                                        <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                                            <div>
-                                                <div className="flex items-start justify-between gap-2">
-                                                    {!carpeta.portada_url && (
-                                                        <div
-                                                            className="flex size-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105"
-                                                            style={{
-                                                                backgroundColor: `${folderColor}1a`,
-                                                                color: folderColor,
-                                                            }}
-                                                        >
-                                                            <Folder className="size-5 fill-current opacity-90" />
-                                                        </div>
-                                                    )}
-
-                                                    {carpeta.completada ? (
-                                                        <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800 text-xs font-semibold ml-auto">
-                                                            <CheckCircle2 className="size-3 mr-1" />
-                                                            ? COMPLETADA 100%
-                                                        </Badge>
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-muted-foreground ml-auto">
-                                                            {carpeta.porcentaje}%
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <h3 className="mt-2 font-bold text-base text-foreground line-clamp-1 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                                                    {carpeta.nombre}
-                                                </h3>
-
-                                                {carpeta.descripcion && (
-                                                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                                                        {carpeta.descripcion}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            {/* Barra de progreso de la carpeta */}
-                                            <div className="space-y-2 pt-2 border-t border-border/50">
-                                                <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
-                                                    <span>
-                                                        {carpeta.revisados_count} de {carpeta.total_materiales} revisadas
-                                                    </span>
-                                                </div>
-
-                                                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-300"
-                                                        style={{
-                                                            width: `${carpeta.porcentaje}%`,
-                                                            backgroundColor: carpeta.completada ? '#10B981' : folderColor,
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <Button
-                                                    asChild
-                                                    variant={carpeta.completada ? 'outline' : 'default'}
-                                                    size="sm"
-                                                    className="w-full mt-2 rounded-xl"
-                                                    style={
-                                                        !carpeta.completada
-                                                            ? { backgroundColor: folderColor, color: '#ffffff' }
-                                                            : undefined
-                                                    }
-                                                >
-                                                    <Link href={route('portal.capacitaciones.carpetas.show', carpeta.id)}>
-                                                        {carpeta.completada ? 'Repasar material' : 'Continuar ?'}
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* 5. SECCIÓN: CAPACITACIONES RECIENTES DEL USUARIO */}
-                {recientes.length > 0 && (
-                    <div className="space-y-3 pt-2">
-                        <div className="flex items-center gap-2">
-                            <Clock className="size-5 text-teal-600 dark:text-teal-400" />
-                            <h2 className="text-base font-bold uppercase tracking-wider text-foreground">
-                                 Capacitaciones Recientes
-                            </h2>
-                        </div>
-                        <p className="text-xs text-muted-foreground -mt-2">
-                            Últimas capacitaciones que has consultado en tu perfil.
-                        </p>
-
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {recientes.map((reciente) => {
-                                const catInfo = getFileCategoryInfo(reciente.tipo);
-                                return (
-                                    <div
-                                        key={reciente.id}
-                                        className="flex items-center justify-between gap-3 rounded-xl border border-sidebar-border/70 p-3.5 bg-card transition-all hover:bg-muted/40 dark:border-sidebar-border shadow-sm"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${catInfo.bgColor}`}>
-                                                <FileIcon tipo={reciente.tipo} className="size-5" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-foreground truncate">
-                                                    {reciente.titulo}
-                                                </p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                                    {reciente.carpeta && (
-                                                        <span className="font-medium text-teal-600 dark:text-teal-400 truncate max-w-[120px]">
-                                                             {reciente.carpeta.nombre}
-                                                        </span>
-                                                    )}
-                                                    <span>•</span>
-                                                    <span className="capitalize">{reciente.revisada_humano}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="shrink-0">
-                                            {reciente.carpeta && (
-                                                <Button size="sm" variant="ghost" asChild className="size-8 p-0">
-                                                    <Link
-                                                        href={route('portal.capacitaciones.carpetas.show', reciente.carpeta.id)}
-                                                        title="Ver capacitacion"
-                                                    >
-                                                        <ArrowRight className="size-4 text-muted-foreground hover:text-foreground" />
-                                                    </Link>
-                                                </Button>
+                                                    <ArrowRight className="size-3.5" />
+                                                </Link>
                                             )}
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+                </div>
             </div>
         </AppLayout>
     );

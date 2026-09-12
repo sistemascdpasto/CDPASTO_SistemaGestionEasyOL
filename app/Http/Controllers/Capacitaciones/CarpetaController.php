@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Capacitaciones;
 use App\Http\Controllers\Controller;
 use App\Models\Capacitaciones\CapacitacionCarpeta;
 use App\Models\Capacitaciones\CapacitacionMaterial;
+use App\Models\Capacitaciones\CapacitacionPortalConfig;
 use App\Models\Capacitaciones\CapacitacionRevision;
 use App\Models\User;
 use Carbon\Carbon;
@@ -225,6 +226,7 @@ class CarpetaController extends Controller
                 'rankingCapacitaciones' => $rankingCapacitaciones,
                 'actividadReciente' => $actividadReciente,
                 'graficaActividad' => $graficaActividad,
+                'portalConfig' => CapacitacionPortalConfig::obtener(),
                 'filters' => [
                     'buscar' => $buscar ?? '',
                     'carpeta_id' => $carpetaId ?? '',
@@ -253,6 +255,7 @@ class CarpetaController extends Controller
                 'rankingCapacitaciones' => [],
                 'actividadReciente' => [],
                 'graficaActividad' => [],
+                'portalConfig' => CapacitacionPortalConfig::obtener(),
                 'filters' => [
                     'buscar' => $buscar ?? '',
                     'carpeta_id' => $carpetaId ?? '',

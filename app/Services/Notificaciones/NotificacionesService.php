@@ -4,7 +4,6 @@ namespace App\Services\Notificaciones;
 
 use App\Models\Flota\Varada;
 use App\Models\Flota\Vehiculo;
-use App\Models\Gente\Sac;
 use App\Models\Seguridad\Alerta;
 use App\Models\Seguridad\Colaborador;
 use App\Models\Seguridad\CondicionSalud;
@@ -29,9 +28,6 @@ class NotificacionesService
 
         if ($es('Gente') || $es('Seguridad')) {
             $constructores[] = fn () => $this->pruebasPeriodo();
-        }
-        if ($es('Gente')) {
-            $constructores[] = fn () => $this->sacSinResolver();
         }
         if ($es('Seguridad')) {
             $constructores[] = fn () => $this->alertasSeguridad();
@@ -102,28 +98,6 @@ class NotificacionesService
             'label' => 'Gestionar en Seguimiento de Pruebas',
             'url' => '/modules/gente/plan-padrinos',
         ]);
-    }
-
-    private function sacSinResolver(): ?array
-    {
-        $registros = Sac::query()
-            ->whereNull('fecha_resuelto')
-            ->orderByDesc('fecha')
-            ->limit(self::MAX_ITEMS)
-            ->get(['id', 'numero_caso_estandar', 'nombre_cuenta', 'motivo_queja', 'fecha']);
-        $total = Sac::query()->whereNull('fecha_resuelto')->count();
-
-        $items = $registros->map(fn (Sac $s) => [
-            'titulo' => $s->nombre_cuenta ?: ('Caso '.($s->numero_caso_estandar ?: $s->id)),
-            'detalle' => $s->motivo_queja ?: 'SAC sin resolver',
-            'fecha' => optional($s->fecha)->format('d/m/Y'),
-            'url' => '/modules/gente/sac',
-        ])->all();
-
-        return $this->grupo('sac', 'SAC sin resolver', 'file-warning', '#E3A11E', $items, [
-            'label' => 'Ver SAC',
-            'url' => '/modules/gente/sac',
-        ], $total);
     }
 
     private function alertasSeguridad(): ?array

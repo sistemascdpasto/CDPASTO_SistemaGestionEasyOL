@@ -7,7 +7,6 @@ use App\Models\Flota\Varada;
 use App\Models\Flota\Vehiculo;
 use App\Models\Gente\Ausentismo;
 use App\Models\Gente\CorreccionMarcacion;
-use App\Models\Gente\Sac;
 use App\Models\Seguridad\Colaborador;
 use App\Services\Seguridad\IndicadoresSeguridadService;
 use Illuminate\Support\Carbon;
@@ -99,16 +98,6 @@ class DashboardResumenService
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
             ->get(['fecha']);
 
-        $sacRango = Sac::query()
-            ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
-            ->get(['fecha']);
-
-        $sacAbiertos = Sac::query()->whereNull('fecha_resuelto')->count();
-        $sacResueltos = Sac::query()
-            ->whereNotNull('fecha_resuelto')
-            ->whereBetween('fecha_resuelto', [$desde->toDateString(), $hasta->toDateString()])
-            ->count();
-
         $correcciones = CorreccionMarcacion::query()
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
             ->count();
@@ -120,22 +109,17 @@ class DashboardResumenService
             'kpis' => [
                 ['label' => 'Colaboradores registrados', 'value' => Colaborador::query()->count()],
                 ['label' => 'Ausentismos', 'value' => $ausentismos->count(), 'hint' => 'en el rango'],
-                ['label' => 'SAC abiertos', 'value' => $sacAbiertos, 'tone' => $sacAbiertos > 0 ? 'warn' : 'good'],
-                ['label' => 'SAC resueltos', 'value' => $sacResueltos, 'hint' => 'en el rango', 'tone' => 'good'],
                 ['label' => 'Correcciones de marcación', 'value' => $correcciones, 'hint' => 'en el rango'],
                 ['label' => 'Correcciones sin colaborador', 'value' => $correccionesSinColaborador, 'tone' => $correccionesSinColaborador > 0 ? 'warn' : 'good'],
             ],
             'tendencia' => $this->serieMensual($desde, $hasta, [
                 'total' => $ausentismos->groupBy(fn ($a) => Carbon::parse($a->fecha)->format('Y-m')),
-                'serie2' => $sacRango->groupBy(fn ($s) => Carbon::parse($s->fecha)->format('Y-m')),
             ]),
-            'tendencia_titulo' => 'Ausentismos y SAC por mes',
+            'tendencia_titulo' => 'Ausentismos por mes',
             'tendencia_series' => [
                 ['key' => 'total', 'label' => 'Ausentismos', 'color' => '#E3A11E'],
-                ['key' => 'serie2', 'label' => 'SAC', 'color' => '#0369A1'],
             ],
             'pendientes' => [
-                ['label' => 'SAC sin resolver', 'value' => $sacAbiertos, 'href' => '/modules/gente/sac', 'tone' => 'warn'],
                 ['label' => 'Correcciones sin colaborador identificado', 'value' => $correccionesSinColaborador, 'href' => '/modules/gente/correccion-marcaciones', 'tone' => 'warn'],
             ],
         ];

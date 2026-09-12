@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Colaborador;
 use App\Http\Controllers\Controller;
 use App\Models\Capacitaciones\CapacitacionCarpeta;
 use App\Models\Capacitaciones\CapacitacionMaterial;
+use App\Models\Capacitaciones\CapacitacionPortalConfig;
 use App\Models\Capacitaciones\CapacitacionRevision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -136,9 +137,10 @@ class CapacitacionController extends Controller
                 'categorias_completadas' => $categoriasCompletadas,
                 'porcentaje_general' => $progresoGeneral,
             ],
-            'destacadas' => $destacadas,
-            'recientes' => $recientes,
-            'resultadosBusqueda' => $resultadosBusqueda,
+            'destacadas'          => $destacadas,
+            'recientes'           => $recientes,
+            'resultadosBusqueda'  => $resultadosBusqueda,
+            'portalConfig'        => CapacitacionPortalConfig::obtener(),
             'filters' => [
                 'buscar' => $buscar ?? '',
             ],

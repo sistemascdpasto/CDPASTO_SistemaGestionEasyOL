@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Capacitaciones\CarpetaController;
 use App\Http\Controllers\Capacitaciones\MaterialController;
+use App\Http\Controllers\Capacitaciones\PortalConfigController;
 use Illuminate\Support\Facades\Route;
 
 // Capacitaciones es un recurso transversal: accesible a todos los pilares
@@ -22,4 +23,9 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Reparto|Gente
         Route::match(['put', 'post'], 'materiales/{material}', [MaterialController::class, 'update'])->name('materiales.update');
         Route::delete('materiales/{material}', [MaterialController::class, 'destroy'])->name('materiales.destroy');
         Route::get('materiales/{material}/descargar', [MaterialController::class, 'descargar'])->name('materiales.descargar');
+
+        // Configuración del hero del portal (solo Administrador, Gente y Seguridad pueden editarlo)
+        Route::post('portal-config', [PortalConfigController::class, 'update'])
+            ->name('portal-config.update')
+            ->middleware('role:Administrador|Gente|Seguridad');
     });

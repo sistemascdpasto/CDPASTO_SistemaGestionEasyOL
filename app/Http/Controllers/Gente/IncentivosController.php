@@ -12,39 +12,47 @@ use Inertia\Response;
 
 class IncentivosController extends Controller
 {
-    /**
-     * Lista paginada de incentivos con filtros opcionales por mes y colaborador.
-     */
     public function index(): Response
     {
         $filtros = [
-            'mes'         => request('mes', ''),
-            'colaborador' => request('colaborador', ''),
+            'mes'          => request('mes', ''),
+            'colaborador'  => request('colaborador', ''),
+            'cargo'        => request('cargo', ''),
         ];
 
         $incentivos = Incentivo::with('colaborador')
-            ->when($filtros['mes'], fn ($q) => $q->where('mes', 'like', '%'.$filtros['mes'].'%'))
+            ->when($filtros['mes'], fn ($q) => $q->where('mes', $filtros['mes']))
+            ->when($filtros['cargo'], fn ($q) => $q->where('cargo', 'like', '%' . $filtros['cargo'] . '%'))
             ->when($filtros['colaborador'], function ($q) use ($filtros) {
-                $q->whereHas('colaborador', function ($q2) use ($filtros) {
-                    $q2->where('nombres', 'like', '%'.$filtros['colaborador'].'%')
-                        ->orWhere('apellidos', 'like', '%'.$filtros['colaborador'].'%')
-                        ->orWhere('cedula', 'like', '%'.$filtros['colaborador'].'%');
+                $term = $filtros['colaborador'];
+                $q->where(function ($q2) use ($term) {
+                    $q2->where('cedula', 'like', '%' . $term . '%')
+                        ->orWhere('nombre', 'like', '%' . $term . '%')
+                        ->orWhereHas('colaborador', function ($q3) use ($term) {
+                            $q3->where('nombres', 'like', '%' . $term . '%')
+                                ->orWhere('apellidos', 'like', '%' . $term . '%')
+                                ->orWhere('cedula', 'like', '%' . $term . '%');
+                        });
                 });
             })
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(50)
             ->withQueryString();
+
+        // Opciones únicas para los selects
+        $meses  = Incentivo::whereNotNull('mes')->distinct()->orderBy('mes')->pluck('mes');
+        $cargos = Incentivo::whereNotNull('cargo')->distinct()->orderBy('cargo')->pluck('cargo');
 
         return Inertia::render('gente/incentivos/index', [
             'incentivos' => $incentivos,
             'filters'    => $filtros,
+            'opciones'   => [
+                'meses'  => $meses,
+                'cargos' => $cargos,
+            ],
         ]);
     }
 
-    /**
-     * Importa registros de incentivos desde uno o varios archivos Excel.
-     * Solo se persisten las filas cuya cédula exista en la tabla de colaboradores.
-     */
     public function store(ImportarIncentivosRequest $request, IncentivosImportService $service): RedirectResponse
     {
         $rutas = collect($request->file('archivos'))
@@ -54,10 +62,10 @@ class IncentivosController extends Controller
         $resultado = $service->importar($rutas);
 
         $mensaje = "Importación completa ({$resultado['archivos_procesados']} archivo(s)): "
-            ."{$resultado['creados']} creados, "
-            ."{$resultado['actualizados']} actualizados, "
-            ."{$resultado['omitidos_sin_colaborador']} omitidos (cédula sin colaborador), "
-            ."{$resultado['errores']} con error.";
+            . "{$resultado['creados']} creados, "
+            . "{$resultado['actualizados']} actualizados, "
+            . "{$resultado['omitidos_sin_colaborador']} omitidos (cédula sin colaborador), "
+            . "{$resultado['errores']} con error.";
 
         $tipo = match (true) {
             $resultado['creados'] === 0 && $resultado['actualizados'] === 0 => 'error',
