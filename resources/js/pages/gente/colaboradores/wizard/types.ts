@@ -1,0 +1,127 @@
+import { type DocumentInfo } from '@/pages/seguridad/colaboradores/colaborador-form-fields';
+
+/**
+ * Representación del colaborador tal como la envía el backend en el wizard:
+ * todas las columnas del modelo (Colaborador::toArray()) más los arreglos de
+ * documentos ya fusionados (columnas legacy + colaborador_documentos) bajo
+ * la misma clave de documento. Como el registro puede estar a medio llenar
+ * (borrador), casi todo es opcional/nullable.
+ */
+export type ColaboradorRecord = {
+    id: number;
+    estado_registro: 'borrador' | 'completo';
+    wizard_step: number | null;
+    [key: string]: string | number | boolean | null | DocumentInfo[] | undefined;
+};
+
+export type Paso1FormData = {
+    user_id: string;
+    cedula: string;
+    nombres: string;
+    apellidos: string;
+    imagen: File | null;
+
+    tipo_documento: string;
+    tipo_documento_otro_label: string;
+    expedido_en: string;
+    sexo: 'femenino' | 'masculino' | '';
+    fecha_nacimiento: string;
+    ciudad_residencia: string;
+    direccion: string;
+    estrato: string;
+    celular_1: string;
+    celular_2: string;
+    correo: string;
+    estado_civil: string;
+
+    discapacidad: 'no_aplica' | 'aplica' | '';
+    discapacidad_tipo: string;
+    discapacidad_observaciones: string;
+    victima_conflicto: 'si' | 'no' | '';
+    victima_conflicto_observaciones: string;
+    libreta_militar: 'no_aplica' | 'aplica' | '';
+    runt_aplica: 'no_aplica' | 'aplica' | '';
+
+    eps: string;
+    eps_otro: string;
+    afp: string;
+    afp_otro: string;
+    arl: string;
+    arl_otro: string;
+
+    sena_especialidad: string;
+    sena_numero_grupo: string;
+    sena_institucion: string;
+    sena_nit: string;
+    sena_centro_formacion: string;
+
+    documento_tipo_identificacion: File[];
+    documento_libreta_militar: File[];
+    documento_eps: File[];
+    documento_pension: File[];
+    documento_arl: File[];
+    documento_runt: File[];
+    documento_sena_carta_presentacion: File[];
+
+    [key: string]: string | boolean | File | File[] | null;
+};
+
+export type Paso2FormData = {
+    ha_trabajado_antes: 'si' | 'no' | '';
+    cargo_anterior: string;
+    fecha_ultima_laboral: string;
+
+    tiene_experiencia: 'si' | 'no' | '';
+    anios_experiencia: string;
+
+    manejo_defensivo_aplica: 'no_aplica' | 'aplica' | '';
+    conduccion_carga_pesada_aplica: 'no_aplica' | 'aplica' | '';
+    experiencia_terreno_plano: 'si' | 'no' | '';
+    experiencia_terreno_montanoso: 'si' | 'no' | '';
+
+    documento_carnet_manejo_defensivo: File[];
+    documento_certificado_manejo_defensivo: File[];
+    documento_certificado_carga_pesada: File[];
+    documento_certificados_terreno_plano: File[];
+
+    [key: string]: string | File | File[] | null;
+};
+
+export type Paso3FormData = {
+    area: 'Administrativa' | 'Operativa' | '';
+    cargo: string;
+    cargo_fecha_inicio: string;
+
+    centro: string;
+    centro_trabajo: string;
+    fecha_ingreso_empresa: string;
+    fecha_retiro_empresa: string;
+    motivo_retiro: string;
+    tipo_contrato: string;
+    contrato_fecha_desde: string;
+    contrato_fecha_hasta: string;
+
+    codigo_qr_skap: string;
+
+    vacaciones_aplica: 'no_aplica' | 'aplica' | '';
+    vacaciones_fecha_desde: string;
+    vacaciones_fecha_hasta: string;
+    vacaciones_pagadas_fecha_desde: string;
+    vacaciones_pagadas_fecha_hasta: string;
+
+    [key: string]: string | null;
+};
+
+export type Paso4FormData = {
+    licencia_conduccion_categorias: string[];
+    es_padrino: 'no_aplica' | 'aplica' | '';
+    tipo_padrino: 'padrino' | 'plan_padrino_personal_nuevo' | '';
+    documento_sena_carta_presentacion: File[];
+    documento_plan_padrino: File[];
+
+    [key: string]: string | string[] | File | File[] | null;
+};
+
+export type ReferenciaOpcion = { id: number; nombre: string };
+export type InstitucionSena = { nombre: string; nit: string };
+export type UsuarioVinculable = { id: number; name: string; identification_number: string };
