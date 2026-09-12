@@ -62,36 +62,41 @@ class CapacitacionController extends Controller
             : 0;
 
         // 3. Capacitaciones destacadas (campo booleano en base de datos)
+        // Excluye la carpeta "Carrusel Portal" que es solo para el carrusel
         $destacadas = CapacitacionMaterial::query()
             ->with('carpeta:id,nombre,color')
             ->where('estado', 'publicado')
             ->where('destacada', true)
+            ->whereHas('carpeta', fn ($q) => $q->where('nombre', '!=', 'Carrusel Portal'))
             ->withExists(['revisiones as revisada' => fn ($r) => $r->where('user_id', $userId)])
             ->latest('id')
             ->take(6)
             ->get();
 
-        // 3b. Carrusel: materiales de tipo video/imagen/enlace (YouTube) destacados
-        $mediaCarrusel = CapacitacionMaterial::query()
-            ->with('carpeta:id,nombre,color')
-            ->where('estado', 'publicado')
-            ->where('destacada', true)
-            ->whereIn('tipo', ['video', 'imagen', 'enlace'])
-            ->orderBy('orden')
-            ->latest('id')
-            ->take(20)
-            ->get()
-            ->map(fn ($mat) => [
-                'id'               => $mat->id,
-                'titulo'           => $mat->titulo,
-                'descripcion'      => $mat->descripcion,
-                'tipo'             => $mat->tipo,
-                'mime_type'        => $mat->mime_type,
-                'archivo_url'      => $mat->archivo_path ? Storage::url($mat->archivo_path) : null,
-                'enlace_externo'   => $mat->enlace_externo,
-                'carpeta'          => $mat->carpeta,
-            ])
-            ->values();
+        // 3b. Carrusel: solo materiales de la carpeta "Carrusel Portal"
+        $carpetaCarrusel = CapacitacionCarpeta::where('nombre', 'Carrusel Portal')->first();
+        $mediaCarrusel = $carpetaCarrusel
+            ? CapacitacionMaterial::query()
+                ->with('carpeta:id,nombre,color')
+                ->where('carpeta_id', $carpetaCarrusel->id)
+                ->where('estado', 'publicado')
+                ->whereIn('tipo', ['video', 'imagen', 'enlace'])
+                ->orderBy('orden')
+                ->latest('id')
+                ->take(20)
+                ->get()
+                ->map(fn ($mat) => [
+                    'id'             => $mat->id,
+                    'titulo'         => $mat->titulo,
+                    'descripcion'    => $mat->descripcion,
+                    'tipo'           => $mat->tipo,
+                    'mime_type'      => $mat->mime_type,
+                    'archivo_url'    => $mat->archivo_path ? Storage::url($mat->archivo_path) : null,
+                    'enlace_externo' => $mat->enlace_externo,
+                    'carpeta'        => $mat->carpeta,
+                ])
+                ->values()
+            : collect();
 
         // 4. Capacitaciones recientes consultadas por el usuario actual
         $recientes = CapacitacionRevision::query()

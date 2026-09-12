@@ -20,7 +20,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { FormEventHandler, useMemo, useState, useRef } from 'react';
+import { FormEventHandler, useEffect, useMemo, useRef, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -187,7 +187,7 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
                 <span>🎬</span> Contenido Multimedia
             </h2>
 
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-md"
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-md mx-auto w-full max-w-2xl"
                  style={{ aspectRatio: '16/9' }}>
 
                 {/* Media */}
