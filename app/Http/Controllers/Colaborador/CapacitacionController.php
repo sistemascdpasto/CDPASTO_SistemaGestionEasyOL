@@ -71,6 +71,28 @@ class CapacitacionController extends Controller
             ->take(6)
             ->get();
 
+        // 3b. Carrusel: materiales de tipo video/imagen/enlace (YouTube) destacados
+        $mediaCarrusel = CapacitacionMaterial::query()
+            ->with('carpeta:id,nombre,color')
+            ->where('estado', 'publicado')
+            ->where('destacada', true)
+            ->whereIn('tipo', ['video', 'imagen', 'enlace'])
+            ->orderBy('orden')
+            ->latest('id')
+            ->take(20)
+            ->get()
+            ->map(fn ($mat) => [
+                'id'               => $mat->id,
+                'titulo'           => $mat->titulo,
+                'descripcion'      => $mat->descripcion,
+                'tipo'             => $mat->tipo,
+                'mime_type'        => $mat->mime_type,
+                'archivo_url'      => $mat->archivo_path ? Storage::url($mat->archivo_path) : null,
+                'enlace_externo'   => $mat->enlace_externo,
+                'carpeta'          => $mat->carpeta,
+            ])
+            ->values();
+
         // 4. Capacitaciones recientes consultadas por el usuario actual
         $recientes = CapacitacionRevision::query()
             ->where('user_id', $userId)
@@ -140,6 +162,7 @@ class CapacitacionController extends Controller
             'destacadas'          => $destacadas,
             'recientes'           => $recientes,
             'resultadosBusqueda'  => $resultadosBusqueda,
+            'mediaCarrusel'       => $mediaCarrusel,
             'portalConfig'        => CapacitacionPortalConfig::obtener(),
             'filters' => [
                 'buscar' => $buscar ?? '',

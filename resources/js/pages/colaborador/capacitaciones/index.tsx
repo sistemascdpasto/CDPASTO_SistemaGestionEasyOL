@@ -20,7 +20,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { FormEventHandler, useMemo, useState } from 'react';
+import { FormEventHandler, useMemo, useState, useRef } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -57,6 +57,207 @@ interface ProgresoGeneral {
     total_categorias: number;
     categorias_completadas: number;
     porcentaje_general: number;
+}
+
+interface MediaItem {
+    id: number;
+    titulo: string;
+    descripcion: string | null;
+    tipo: string;
+    mime_type: string | null;
+    archivo_url: string | null;
+    enlace_externo: string | null;
+    carpeta: { id: number; nombre: string; color: string | null } | null;
+}
+
+// ── helpers carrusel ──────────────────────────────────────────────────────
+
+/** Extrae el ID de YouTube de una URL */
+function youtubeId(url: string): string | null {
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
+}
+
+/** ¿Es un video local? */
+function esVideoLocal(item: MediaItem): boolean {
+    if (item.tipo === 'video' && item.archivo_url) return true;
+    if (item.mime_type?.startsWith('video/')) return true;
+    return false;
+}
+
+/** ¿Es YouTube? */
+function esYoutube(item: MediaItem): boolean {
+    if (!item.enlace_externo) return false;
+    return /youtube\.com|youtu\.be/.test(item.enlace_externo);
+}
+
+/** ¿Es imagen? */
+function esImagen(item: MediaItem): boolean {
+    return item.tipo === 'imagen' || !!item.mime_type?.startsWith('image/');
+}
+
+// ── Carrusel de media ─────────────────────────────────────────────────────
+function CarruselMedia({ items }: { items: MediaItem[] }) {
+    const [idx, setIdx] = useState(0);
+    const [playing, setPlaying] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const total = items.length;
+
+    // Al cambiar de slide pausamos cualquier video anterior
+    const goTo = (nuevoIdx: number) => {
+        if (videoRef.current) {
+            videoRef.current.pause();
+        }
+        setPlaying(false);
+        setIdx(nuevoIdx);
+    };
+
+    const prev = () => goTo((idx - 1 + total) % total);
+    const next = () => goTo((idx + 1) % total);
+
+    // Auto-avance solo si hay varios y no hay video reproduciéndose
+    useEffect(() => {
+        if (total <= 1 || playing) return;
+        const t = setTimeout(() => setIdx((i) => (i + 1) % total), 5000);
+        return () => clearTimeout(t);
+    }, [idx, total, playing]);
+
+    if (total === 0) return null;
+
+    const item = items[idx];
+
+    const renderMedia = () => {
+        // Video local
+        if (esVideoLocal(item)) {
+            return (
+                <video
+                    ref={videoRef}
+                    key={item.id}
+                    src={item.archivo_url!}
+                    className="h-full w-full object-contain bg-black"
+                    controls
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
+                    onEnded={() => {
+                        setPlaying(false);
+                        if (total > 1) setTimeout(() => next(), 800);
+                    }}
+                />
+            );
+        }
+
+        // YouTube
+        if (esYoutube(item)) {
+            const vid = youtubeId(item.enlace_externo!);
+            return (
+                <iframe
+                    key={item.id}
+                    className="h-full w-full"
+                    src={`https://www.youtube-nocookie.com/embed/${vid}?rel=0`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={item.titulo}
+                />
+            );
+        }
+
+        // Imagen
+        if (esImagen(item) && item.archivo_url) {
+            return (
+                <img
+                    key={item.id}
+                    src={item.archivo_url}
+                    alt={item.titulo}
+                    className="h-full w-full object-contain bg-black"
+                />
+            );
+        }
+
+        // Fallback
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                <p className="text-slate-400 text-sm">{item.titulo}</p>
+            </div>
+        );
+    };
+
+    return (
+        <section className="space-y-3">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                <span>🎬</span> Contenido Multimedia
+            </h2>
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-md"
+                 style={{ aspectRatio: '16/9' }}>
+
+                {/* Media */}
+                <div className="absolute inset-0">{renderMedia()}</div>
+
+                {/* Gradient inferior con título */}
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                    <p className="text-sm font-semibold text-white drop-shadow line-clamp-1">{item.titulo}</p>
+                    {item.carpeta && (
+                        <p className="text-xs text-white/60">{item.carpeta.nombre}</p>
+                    )}
+                </div>
+
+                {/* Flechas — solo si hay más de 1 */}
+                {total > 1 && (
+                    <>
+                        <button
+                            onClick={prev}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+                        <button
+                            onClick={next}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </>
+                )}
+
+                {/* Dots */}
+                {total > 1 && (
+                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {items.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => goTo(i)}
+                                className={`size-2 rounded-full transition-all ${i === idx ? 'bg-white scale-125' : 'bg-white/40'}`}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Miniaturas si hay más de 1 */}
+            {total > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                    {items.map((it, i) => (
+                        <button
+                            key={it.id}
+                            onClick={() => goTo(i)}
+                            className={`relative shrink-0 h-16 w-28 overflow-hidden rounded-lg border-2 transition-all ${
+                                i === idx ? 'border-emerald-500 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
+                            }`}
+                        >
+                            {esImagen(it) && it.archivo_url ? (
+                                <img src={it.archivo_url} alt={it.titulo} className="h-full w-full object-cover" />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-800 text-white text-xs">
+                                    {esYoutube(it) ? '▶ YT' : esVideoLocal(it) ? '▶' : '🖼'}
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        </button>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
 }
 
 // ── Tarjeta de carpeta/curso ───────────────────────────────────────────────
@@ -143,6 +344,7 @@ export default function CentroCapacitacionesIndex({
     recientes,
     resultadosBusqueda,
     portalConfig,
+    mediaCarrusel = [],
     filters,
 }: {
     carpetas: CarpetaProgreso[];
@@ -151,6 +353,7 @@ export default function CentroCapacitacionesIndex({
     recientes: MaterialItem[];
     resultadosBusqueda: MaterialItem[] | null;
     portalConfig?: { titulo_hero: string; subtitulo_hero: string | null; imagen_hero_url: string | null };
+    mediaCarrusel?: MediaItem[];
     filters: { buscar?: string };
 }) {
     const [busqueda, setBusqueda] = useState(filters.buscar || '');
@@ -182,13 +385,13 @@ export default function CentroCapacitacionesIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Centro de Capacitaciones" />
 
-            {/* ── WRAPPER OSCURO que envuelve toda la página ── */}
-            <div className="min-h-screen bg-[#0a1628] text-white">
+            {/* ── WRAPPER que envuelve toda la página ── */}
+            <div className="bg-[#0a1628] text-white">
 
                 {/* ══════════════════════════════════════════
-                    HERO — imagen de fondo + texto + estadísticas
+                    HERO — sticky, se queda fijo al hacer scroll
                 ══════════════════════════════════════════ */}
-                <div className="relative overflow-hidden">
+                <div className="sticky top-0 z-0 overflow-hidden">
                     {/* Imagen de fondo del admin o gradiente por defecto */}
                     {portalConfig?.imagen_hero_url ? (
                         <>
@@ -320,9 +523,9 @@ export default function CentroCapacitacionesIndex({
                 </div>
 
                 {/* ══════════════════════════════════════════
-                    CONTENIDO PRINCIPAL
+                    CONTENIDO PRINCIPAL — sube y tapa el hero
                 ══════════════════════════════════════════ */}
-                <div className="bg-white">
+                <div className="relative z-10 -mt-8 rounded-t-3xl bg-white shadow-2xl">
                 <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
 
                     {/* Resultados de búsqueda global */}
@@ -410,6 +613,11 @@ export default function CentroCapacitacionesIndex({
                                 })}
                             </div>
                         </section>
+                    )}
+
+                    {/* Carrusel de videos e imágenes */}
+                    {mediaCarrusel.length > 0 && (
+                        <CarruselMedia items={mediaCarrusel} />
                     )}
 
                     {/* Catálogo de cursos */}

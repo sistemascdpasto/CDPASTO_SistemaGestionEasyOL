@@ -157,16 +157,18 @@ function MobileCard({ item }: { item: IncentivoRow }) {
         <div className="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
             {/* Cabecera siempre visible */}
             <button
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3 text-left"
                 onClick={() => setOpen(!open)}
             >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 text-sm truncate">{nombre}</p>
-                    <p className="text-xs text-slate-400">{cedula} · {item.cargo ?? ''} · {item.mes ?? ''}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                        {cedula}{cedula && item.cargo ? ' · ' : ''}{item.cargo ?? ''}{(cedula || item.cargo) && item.mes ? ' · ' : ''}{item.mes ?? ''}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     {item.total_4 && (
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-blue-700 whitespace-nowrap">
                             {fmtDecimal(item.total_4)} pts
                         </span>
                     )}
@@ -176,24 +178,50 @@ function MobileCard({ item }: { item: IncentivoRow }) {
 
             {/* Detalle expandible */}
             {open && (
-                <div className="border-t border-slate-100 px-4 py-3 grid grid-cols-2 gap-3 text-xs">
+                <div className="border-t border-slate-100 px-3 py-3 sm:px-4 sm:py-3 grid grid-cols-1 xs:grid-cols-2 gap-2.5 text-xs">
                     {[
-                        { label: item.indicador_1, pilar: item.pilar_1, total: item.total_1, meta: item.meta_1 },
-                        { label: item.indicador_2, pilar: item.pilar_2, total: item.total_2, meta: item.meta_2 },
-                        { label: item.indicador_3, pilar: item.pilar_3, total: item.total_3, meta: item.meta_3 },
+                        { label: item.indicador_1, pilar: item.pilar_1, total: item.total_1, meta: item.meta_1, vInd: item.valor_indicador_1 },
+                        { label: item.indicador_2, pilar: item.pilar_2, total: item.total_2, meta: item.meta_2, vInd: item.valor_indicador_2 },
+                        { label: item.indicador_3, pilar: item.pilar_3, total: item.total_3, meta: item.meta_3, vInd: item.valor_indicador_3 },
                     ].map((ind, i) => ind.label && (
-                        <div key={i} className="rounded-lg bg-slate-50 p-2">
-                            <p className="font-medium text-slate-600 truncate mb-0.5">{ind.label}</p>
-                            {ind.pilar && <span className="inline-block rounded-full bg-blue-100 px-1.5 text-[10px] text-blue-700">{ind.pilar}</span>}
-                            <div className="flex justify-between mt-1">
+                        <div key={i} className="rounded-lg bg-slate-50 p-2.5">
+                            <p className="font-medium text-slate-600 truncate mb-1">{ind.label}</p>
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                                {ind.pilar && <span className="inline-block rounded-full bg-blue-100 px-1.5 text-[10px] text-blue-700">{ind.pilar}</span>}
+                                {ind.vInd && parseFloat(ind.vInd) !== 0 && (
+                                    <span className="inline-block rounded-full bg-emerald-100 px-1.5 text-[10px] text-emerald-700">
+                                        V: {fmtDecimal(ind.vInd)}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex justify-between items-baseline">
                                 <span className="font-bold text-slate-700">{fmtDecimal(ind.total)}</span>
-                                <span className="text-slate-400">Meta: {fmtDecimal(ind.meta)}</span>
+                                <span className="text-[11px] text-slate-400">Meta: {fmtDecimal(ind.meta)}</span>
                             </div>
                         </div>
                     ))}
-                    {item.podium && (
-                        <div className="col-span-2 text-center text-slate-500">
-                            Pódium: <span className="font-semibold text-blue-600">{item.podium}</span>
+                    {(item.valor_indicador_1 || item.valor_indicador_2 || item.valor_indicador_3 || item.podium || item.total_4 || item.meta_4) && (
+                        <div className="col-span-1 xs:col-span-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 p-2.5 border border-blue-100">
+                            <div className="grid grid-cols-2 xs:grid-cols-3 gap-2 text-[11px]">
+                                {item.total_4 && (
+                                    <div>
+                                        <span className="text-slate-500">Total final:</span>{' '}
+                                        <span className="font-bold text-blue-700">{fmtDecimal(item.total_4)}</span>
+                                    </div>
+                                )}
+                                {item.meta_4 && (
+                                    <div>
+                                        <span className="text-slate-500">Meta final:</span>{' '}
+                                        <span className="font-semibold text-slate-700">{fmtDecimal(item.meta_4)}</span>
+                                    </div>
+                                )}
+                                {item.podium && (
+                                    <div className="col-span-2 xs:col-span-1">
+                                        <span className="text-slate-500">Pódium:</span>{' '}
+                                        <span className="font-semibold text-blue-600">{item.podium}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -229,18 +257,18 @@ export default function IncentivosIndex({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Incentivos" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-3 sm:gap-6 sm:p-4">
+            <div className="flex h-full flex-1 flex-col gap-3 p-2 xs:gap-4 xs:p-3 sm:gap-5 sm:p-4 lg:gap-6 lg:p-6">
 
                 {/* Encabezado */}
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <HeadingSmall
                         title="Incentivos"
                         description="Registros de indicadores e incentivos importados desde Excel."
                     />
                     <ImportarIncentivosDialog
                         trigger={
-                            <Button variant="outline" size="sm">
-                                <Upload className="size-4" />
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto justify-center">
+                                <Upload className="size-4 shrink-0" />
                                 <span className="hidden sm:inline">Importar Excel</span>
                                 <span className="sm:hidden">Importar</span>
                             </Button>
@@ -248,8 +276,8 @@ export default function IncentivosIndex({
                     />
                 </div>
 
-                {/* Filtros — 1 col móvil, 3 col desktop */}
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {/* Filtros — 1 col móvil, 2 cols tablet, 3 cols desktop */}
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
                     <SearchSelect
                         placeholder="Mes"
                         value={form.mes}
@@ -274,53 +302,53 @@ export default function IncentivosIndex({
                     <PodiumIncentivos incentivos={incentivos.data} />
                 )}
 
-                {/* Tabla — solo desktop (md+), tarjetas en móvil */}
+                {/* Tabla — solo desktop (lg+), tarjetas en móvil + tablet */}
                 {incentivos.data.length === 0 ? (
                     <p className="py-10 text-center text-sm text-muted-foreground">
                         No hay registros de incentivos que coincidan con los filtros.
                     </p>
                 ) : (
                     <>
-                        {/* Vista móvil: tarjetas colapsables */}
-                        <div className="flex flex-col gap-2 md:hidden">
+                        {/* Vista móvil y tablet: tarjetas colapsables */}
+                        <div className="flex flex-col gap-2 lg:hidden">
                             {incentivos.data.map((item) => (
                                 <MobileCard key={item.id} item={item} />
                             ))}
                         </div>
 
                         {/* Vista desktop: tabla con scroll horizontal */}
-                        <div className="hidden md:block overflow-x-auto rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                        <div className="hidden lg:block overflow-x-auto rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="whitespace-nowrap">Mes</TableHead>
-                                        <TableHead className="whitespace-nowrap">Colaborador</TableHead>
-                                        <TableHead className="whitespace-nowrap">Cargo</TableHead>
-                                        <TableHead className="whitespace-nowrap">Indicador 1</TableHead>
-                                        <TableHead className="whitespace-nowrap">Pilar 1</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Total 1</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Meta 1</TableHead>
-                                        <TableHead className="whitespace-nowrap">Indicador 2</TableHead>
-                                        <TableHead className="whitespace-nowrap">Pilar 2</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Total 2</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Meta 2</TableHead>
-                                        <TableHead className="whitespace-nowrap">Indicador 3</TableHead>
-                                        <TableHead className="whitespace-nowrap">Pilar 3</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Total 3</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Meta 3</TableHead>
-                                        <TableHead className="whitespace-nowrap">Podium</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 1</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 2</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 3</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Total 4</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Meta 4</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Mes</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Colaborador</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Cargo</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Indicador 1</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Pilar 1</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Total 1</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Meta 1</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Indicador 2</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Pilar 2</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Total 2</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Meta 2</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Indicador 3</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Pilar 3</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Total 3</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Meta 3</TableHead>
+                                        <TableHead className="whitespace-nowrap px-3 py-2.5">Podium</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">V. Ind. 1</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">V. Ind. 2</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">V. Ind. 3</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Total 4</TableHead>
+                                        <TableHead className="whitespace-nowrap text-right px-3 py-2.5">Meta 4</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {incentivos.data.map((item) => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="whitespace-nowrap">{item.mes ?? '—'}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.mes ?? '—'}</TableCell>
+                                            <TableCell className="px-3 py-2.5">
                                                 <p className="whitespace-nowrap font-medium">
                                                     {item.colaborador
                                                         ? `${item.colaborador.nombres} ${item.colaborador.apellidos}`
@@ -330,25 +358,25 @@ export default function IncentivosIndex({
                                                     {item.cedula ?? item.colaborador?.cedula ?? ''}
                                                 </p>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{item.cargo ?? '—'}</TableCell>
-                                            <TableCell className="max-w-[160px] truncate" title={item.indicador_1 ?? ''}>{item.indicador_1 ?? '—'}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{item.pilar_1 ?? '—'}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.total_1)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.meta_1)}</TableCell>
-                                            <TableCell className="max-w-[160px] truncate" title={item.indicador_2 ?? ''}>{item.indicador_2 ?? '—'}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{item.pilar_2 ?? '—'}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.total_2)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.meta_2)}</TableCell>
-                                            <TableCell className="max-w-[160px] truncate" title={item.indicador_3 ?? ''}>{item.indicador_3 ?? '—'}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{item.pilar_3 ?? '—'}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.total_3)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.meta_3)}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{item.podium ?? '—'}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_1)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_2)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_3)}</TableCell>
-                                            <TableCell className="text-right font-semibold text-blue-600">{fmtDecimal(item.total_4)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.meta_4)}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.cargo ?? '—'}</TableCell>
+                                            <TableCell className="max-w-[160px] truncate px-3 py-2.5" title={item.indicador_1 ?? ''}>{item.indicador_1 ?? '—'}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.pilar_1 ?? '—'}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.total_1)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.meta_1)}</TableCell>
+                                            <TableCell className="max-w-[160px] truncate px-3 py-2.5" title={item.indicador_2 ?? ''}>{item.indicador_2 ?? '—'}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.pilar_2 ?? '—'}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.total_2)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.meta_2)}</TableCell>
+                                            <TableCell className="max-w-[160px] truncate px-3 py-2.5" title={item.indicador_3 ?? ''}>{item.indicador_3 ?? '—'}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.pilar_3 ?? '—'}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.total_3)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.meta_3)}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-2.5">{item.podium ?? '—'}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.valor_indicador_1)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.valor_indicador_2)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.valor_indicador_3)}</TableCell>
+                                            <TableCell className="text-right font-semibold text-blue-600 px-3 py-2.5">{fmtDecimal(item.total_4)}</TableCell>
+                                            <TableCell className="text-right px-3 py-2.5">{fmtDecimal(item.meta_4)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -357,24 +385,30 @@ export default function IncentivosIndex({
                     </>
                 )}
 
-                {/* Paginación */}
+                {/* Paginación responsive */}
                 {incentivos.links.length > 3 && (
-                    <div className="flex flex-wrap gap-1">
-                        {incentivos.links.map((link, index) => (
-                            <Button
-                                key={index}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                disabled={!link.url}
-                                asChild={!!link.url}
-                            >
-                                {link.url ? (
-                                    <Link href={link.url} preserveScroll dangerouslySetInnerHTML={{ __html: link.label }} />
-                                ) : (
-                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                                )}
-                            </Button>
-                        ))}
+                    <div className="flex flex-wrap items-center justify-center sm:justify-between gap-2 pt-1">
+                        <p className="text-xs text-muted-foreground order-2 sm:order-1 w-full sm:w-auto text-center sm:text-left">
+                            Total: <span className="font-semibold text-slate-600">{incentivos.total}</span> registros
+                        </p>
+                        <div className="flex flex-wrap gap-1 justify-center order-1 sm:order-2 w-full sm:w-auto">
+                            {incentivos.links.map((link, index) => (
+                                <Button
+                                    key={index}
+                                    variant={link.active ? 'default' : 'outline'}
+                                    size="sm"
+                                    disabled={!link.url}
+                                    asChild={!!link.url}
+                                    className="h-8 min-w-[2rem] px-2 text-xs"
+                                >
+                                    {link.url ? (
+                                        <Link href={link.url} preserveScroll dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    ) : (
+                                        <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    )}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

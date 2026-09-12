@@ -26,6 +26,19 @@ class CarpetaController extends Controller
         $fechaFin = $request->query('fecha_fin');
         $estadoFiltro = $request->query('estado'); // completado, en_proceso, sin_actividad
 
+        // Carpeta especial para el carrusel del portal — se crea si no existe
+        $carpetaCarrusel = CapacitacionCarpeta::firstOrCreate(
+            ['nombre' => 'Carrusel Portal'],
+            [
+                'descripcion'          => 'Videos e imágenes que aparecen en el carrusel del portal de colaboradores.',
+                'color'                => '#0D9488',
+                'icono'                => 'play',
+                'visible_colaborador'  => false,
+                'orden'                => 0,
+                'created_by'           => null,
+            ]
+        );
+
         try {
             // 1. Carpetas disponibles (solo raíz, ordenadas de forma ascendente)
             $carpetas = CapacitacionCarpeta::query()
@@ -227,6 +240,7 @@ class CarpetaController extends Controller
                 'actividadReciente' => $actividadReciente,
                 'graficaActividad' => $graficaActividad,
                 'portalConfig' => CapacitacionPortalConfig::obtener(),
+                'carpetaCarruselId' => $carpetaCarrusel->id,
                 'filters' => [
                     'buscar' => $buscar ?? '',
                     'carpeta_id' => $carpetaId ?? '',
@@ -256,6 +270,7 @@ class CarpetaController extends Controller
                 'actividadReciente' => [],
                 'graficaActividad' => [],
                 'portalConfig' => CapacitacionPortalConfig::obtener(),
+                'carpetaCarruselId' => $carpetaCarrusel->id,
                 'filters' => [
                     'buscar' => $buscar ?? '',
                     'carpeta_id' => $carpetaId ?? '',

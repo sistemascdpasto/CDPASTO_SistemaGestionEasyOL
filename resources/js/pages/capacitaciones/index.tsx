@@ -1,4 +1,5 @@
 import { CrearCarpetaDialog } from '@/components/capacitaciones/crear-carpeta-dialog';
+import { SubirMaterialDialog } from '@/components/capacitaciones/subir-material-dialog';
 import { FileIcon, getFileCategoryInfo } from '@/components/capacitaciones/file-icon';
 import HeadingSmall from '@/components/heading-small';
 import {
@@ -65,6 +66,7 @@ import {
     Flame,
     Folder,
     FolderPlus,
+    Clapperboard,
     MoreVertical,
     Pencil,
     PieChart as PieIcon,
@@ -202,6 +204,7 @@ export default function CapacitacionesAdminIndex({
     actividadReciente = [],
     graficaActividad = [],
     portalConfig,
+    carpetaCarruselId,
     filters = {},
 }: {
     carpetas?: Carpeta[];
@@ -218,6 +221,7 @@ export default function CapacitacionesAdminIndex({
     actividadReciente?: ActividadItem[];
     graficaActividad?: GraficaActividadItem[];
     portalConfig?: PortalConfig;
+    carpetaCarruselId?: number;
     filters?: any;
 }) {
     // Asignar colaboradores recibidos del backend a colaboradoresDetalle para uso interno
@@ -238,6 +242,9 @@ export default function CapacitacionesAdminIndex({
     const [carpetaEditar, setCarpetaEditar] = useState<Carpeta | null>(null);
     const [carpetaEliminar, setCarpetaEliminar] = useState<Carpeta | null>(null);
     const [capacitacionDetalle, setCapacitacionDetalle] = useState<CapacitacionRanking | null>(null);
+
+    // ── Dialog subir al carrusel ───────────────────────────────────────────
+    const [carruselOpen, setCarruselOpen] = useState(false);
 
     // ── Estado del formulario de configuración del hero ────────────────────
     const [heroOpen, setHeroOpen]             = useState(false);
@@ -385,6 +392,16 @@ export default function CapacitacionesAdminIndex({
                             <Pencil className="mr-2 size-4" />
                             Configurar Hero Portal
                         </Button>
+                        {carpetaCarruselId && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setCarruselOpen(true)}
+                                className="shadow-sm border-teal-300 text-teal-700 hover:bg-teal-50"
+                            >
+                                <Clapperboard className="mr-2 size-4" />
+                                Subir al Carrusel
+                            </Button>
+                        )}
                         <Button
                             onClick={() => {
                                 setCarpetaEditar(null);
@@ -1206,6 +1223,15 @@ export default function CapacitacionesAdminIndex({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ── Dialog subir al carrusel ── */}
+            {carpetaCarruselId && (
+                <SubirMaterialDialog
+                    open={carruselOpen}
+                    onOpenChange={setCarruselOpen}
+                    carpetaId={carpetaCarruselId}
+                />
+            )}
 
             {/* ── Dialog de configuración del Hero del portal ── */}
             <Dialog open={heroOpen} onOpenChange={setHeroOpen}>
