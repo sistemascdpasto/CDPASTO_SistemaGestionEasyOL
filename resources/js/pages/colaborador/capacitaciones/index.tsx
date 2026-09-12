@@ -67,61 +67,54 @@ function CursoCard({ carpeta }: { carpeta: CarpetaProgreso }) {
     return (
         <Link
             href={route('portal.capacitaciones.carpetas.show', carpeta.id)}
-            className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm
-                       transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:shadow-xl hover:shadow-emerald-900/20"
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm
+                       transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg"
         >
-            {/* Imagen de portada o color sólido */}
-            <div className="relative h-36 overflow-hidden">
+            {/* ── Imagen grande (ocupa la mayor parte) ── */}
+            <div className="relative h-56 w-full overflow-hidden bg-[#0d1f35]">
                 {carpeta.portada_url ? (
-                    <>
-                        <img
-                            src={carpeta.portada_url}
-                            alt={carpeta.nombre}
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    </>
+                    <img
+                        src={carpeta.portada_url}
+                        alt={carpeta.nombre}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                 ) : (
                     <div
                         className="h-full w-full"
-                        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}44)` }}
+                        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}33)` }}
                     />
                 )}
 
-                {/* Badge de completada */}
+                {/* Gradiente inferior para que el texto se lea */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                {/* Badge completada */}
                 {carpeta.completada && (
                     <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
                         <CheckCircle2 className="size-3" /> Completado
                     </span>
                 )}
 
-                {/* Icono de categoría */}
-                <div
-                    className="absolute bottom-2 left-3 flex size-9 items-center justify-center rounded-xl shadow-md"
-                    style={{ backgroundColor: color }}
-                >
-                    <BookOpen className="size-4 text-white" />
-                </div>
-            </div>
-
-            {/* Contenido */}
-            <div className="flex flex-1 flex-col gap-3 p-4">
-                <div>
-                    <h3 className="line-clamp-1 font-bold text-white transition-colors group-hover:text-emerald-300">
+                {/* Nombre + descripción encima del gradiente, pegado abajo */}
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="font-bold text-white leading-tight line-clamp-2 transition-colors group-hover:text-emerald-300">
                         {carpeta.nombre}
                     </h3>
                     {carpeta.descripcion && (
-                        <p className="mt-1 line-clamp-2 text-xs text-white/60">{carpeta.descripcion}</p>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-white/60">{carpeta.descripcion}</p>
                     )}
                 </div>
+            </div>
 
-                {/* Progreso */}
-                <div className="mt-auto space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-white/50">
+            {/* ── Franja inferior: progreso + CTA ── */}
+            <div className="flex flex-col gap-2 p-3 bg-white">
+                {/* Barra de progreso */}
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
                         <span>{carpeta.revisados_count} / {carpeta.total_materiales} revisados</span>
-                        <span className="font-bold text-white/80">{pct}%</span>
+                        <span className="font-bold text-slate-600">{pct}%</span>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                         <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
@@ -133,7 +126,7 @@ function CursoCard({ carpeta }: { carpeta: CarpetaProgreso }) {
                 </div>
 
                 {/* CTA */}
-                <div className="flex items-center justify-between pt-1 text-xs font-semibold text-emerald-400">
+                <div className="flex items-center justify-between text-xs font-semibold text-emerald-600">
                     <span>{carpeta.completada ? 'Repasar' : pct > 0 ? 'Continuar' : 'Comenzar'}</span>
                     <ChevronRight className="size-4 transition-transform group-hover:translate-x-1" />
                 </div>
@@ -329,43 +322,44 @@ export default function CentroCapacitacionesIndex({
                 {/* ══════════════════════════════════════════
                     CONTENIDO PRINCIPAL
                 ══════════════════════════════════════════ */}
+                <div className="bg-white">
                 <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
 
                     {/* Resultados de búsqueda global */}
                     {resultadosBusqueda !== null && (
-                        <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+                        <section className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="flex items-center gap-2 font-bold text-white">
-                                    <Search className="size-4 text-emerald-400" />
+                                <h2 className="flex items-center gap-2 font-bold text-slate-800">
+                                    <Search className="size-4 text-emerald-600" />
                                     {resultadosBusqueda.length} resultado(s) para "{busqueda}"
                                 </h2>
-                                <Button variant="ghost" size="sm" onClick={limpiarBusqueda} className="text-white/60 hover:text-white">
+                                <Button variant="ghost" size="sm" onClick={limpiarBusqueda} className="text-slate-500 hover:text-slate-800">
                                     Ver todos
                                 </Button>
                             </div>
                             {resultadosBusqueda.length === 0 ? (
-                                <p className="py-4 text-center text-sm text-white/40">No se encontraron capacitaciones.</p>
+                                <p className="py-4 text-center text-sm text-slate-400">No se encontraron capacitaciones.</p>
                             ) : (
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                     {resultadosBusqueda.map((mat) => {
                                         const ci = getFileCategoryInfo(mat.tipo);
                                         return (
-                                            <div key={mat.id} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                                            <div key={mat.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                 <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${ci.bgColor}`}>
                                                     <FileIcon tipo={mat.tipo} className="size-5" />
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="truncate font-semibold text-white text-sm">{mat.titulo}</p>
+                                                    <p className="truncate font-semibold text-slate-800 text-sm">{mat.titulo}</p>
                                                     {mat.carpeta && (
                                                         <Link
                                                             href={route('portal.capacitaciones.carpetas.show', mat.carpeta.id)}
-                                                            className="mt-1 flex items-center gap-1 text-xs text-emerald-400 hover:underline"
+                                                            className="mt-1 flex items-center gap-1 text-xs text-emerald-600 hover:underline"
                                                         >
                                                             {mat.carpeta.nombre} <ArrowRight className="size-3" />
                                                         </Link>
                                                     )}
                                                 </div>
-                                                {mat.revisada && <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />}
+                                                {mat.revisada && <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />}
                                             </div>
                                         );
                                     })}
@@ -377,7 +371,7 @@ export default function CentroCapacitacionesIndex({
                     {/* Destacadas */}
                     {destacadas.length > 0 && (
                         <section className="space-y-4">
-                            <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
                                 <Star className="size-5 fill-amber-400 text-amber-400" />
                                 Capacitaciones Destacadas
                             </h2>
@@ -387,26 +381,26 @@ export default function CentroCapacitacionesIndex({
                                     return (
                                         <div
                                             key={d.id}
-                                            className="group relative overflow-hidden rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 transition-all hover:border-amber-400/40 hover:shadow-lg hover:shadow-amber-900/10"
+                                            className="group relative overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 p-5 transition-all hover:border-amber-300 hover:shadow-md"
                                         >
                                             <div className="mb-3 flex items-start justify-between">
                                                 <div className={`flex size-11 items-center justify-center rounded-xl ${ci.bgColor}`}>
                                                     <FileIcon tipo={d.tipo} className="size-6" />
                                                 </div>
-                                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
                                                     Destacada
                                                 </span>
                                             </div>
-                                            <h3 className="line-clamp-1 font-bold text-white group-hover:text-amber-300 transition-colors">
+                                            <h3 className="line-clamp-1 font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
                                                 {d.titulo}
                                             </h3>
                                             {d.descripcion && (
-                                                <p className="mt-1 line-clamp-2 text-xs text-white/50">{d.descripcion}</p>
+                                                <p className="mt-1 line-clamp-2 text-xs text-slate-500">{d.descripcion}</p>
                                             )}
                                             {d.carpeta && (
                                                 <Link
                                                     href={route('portal.capacitaciones.carpetas.show', d.carpeta.id)}
-                                                    className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:underline"
+                                                    className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"
                                                 >
                                                     {d.carpeta.nombre} <ArrowRight className="size-3" />
                                                 </Link>
@@ -421,19 +415,19 @@ export default function CentroCapacitacionesIndex({
                     {/* Catálogo de cursos */}
                     <section id="cursos" className="space-y-5 scroll-mt-8">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">
+                            <h2 className="text-lg font-bold text-slate-800">
                                 Explora por Categoría
-                                <span className="ml-2 text-sm font-normal text-white/40">({carpetasFiltradas.length})</span>
+                                <span className="ml-2 text-sm font-normal text-slate-400">({carpetasFiltradas.length})</span>
                             </h2>
                         </div>
 
                         {carpetasFiltradas.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-16 text-center">
-                                <BookOpen className="size-12 text-white/20" />
-                                <p className="mt-4 text-base font-medium text-white/60">
+                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 py-16 text-center">
+                                <BookOpen className="size-12 text-slate-300" />
+                                <p className="mt-4 text-base font-medium text-slate-500">
                                     {busqueda ? 'Sin coincidencias' : 'No hay categorías disponibles'}
                                 </p>
-                                <p className="mt-1 text-sm text-white/30">
+                                <p className="mt-1 text-sm text-slate-400">
                                     {busqueda ? 'Intenta otra búsqueda.' : 'El equipo administrativo publicará módulos próximamente.'}
                                 </p>
                             </div>
@@ -449,8 +443,8 @@ export default function CentroCapacitacionesIndex({
                     {/* Recientes */}
                     {recientes.length > 0 && (
                         <section className="space-y-4 pb-10">
-                            <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-                                <Clock className="size-5 text-teal-400" />
+                            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                                <Clock className="size-5 text-teal-600" />
                                 Consultados Recientemente
                             </h2>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -459,16 +453,16 @@ export default function CentroCapacitacionesIndex({
                                     return (
                                         <div
                                             key={r.id}
-                                            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-teal-500/30 hover:bg-white/8"
+                                            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-teal-300 hover:shadow-md"
                                         >
                                             <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${ci.bgColor}`}>
                                                 <FileIcon tipo={r.tipo} className="size-5" />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-semibold text-white">{r.titulo}</p>
-                                                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-white/40">
+                                                <p className="truncate text-sm font-semibold text-slate-800">{r.titulo}</p>
+                                                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
                                                     {r.carpeta && (
-                                                        <span className="text-teal-400">{r.carpeta.nombre}</span>
+                                                        <span className="text-teal-600">{r.carpeta.nombre}</span>
                                                     )}
                                                     {r.carpeta && <span>·</span>}
                                                     <span>{r.revisada_humano}</span>
@@ -477,7 +471,7 @@ export default function CentroCapacitacionesIndex({
                                             {r.carpeta && (
                                                 <Link
                                                     href={route('portal.capacitaciones.carpetas.show', r.carpeta.id)}
-                                                    className="shrink-0 rounded-lg border border-white/10 p-1.5 text-white/40 transition-all hover:border-teal-500/40 hover:text-teal-400"
+                                                    className="shrink-0 rounded-lg border border-slate-200 p-1.5 text-slate-400 transition-all hover:border-teal-400 hover:text-teal-600"
                                                 >
                                                     <ArrowRight className="size-3.5" />
                                                 </Link>
@@ -488,6 +482,7 @@ export default function CentroCapacitacionesIndex({
                             </div>
                         </section>
                     )}
+                </div>
                 </div>
             </div>
         </AppLayout>
