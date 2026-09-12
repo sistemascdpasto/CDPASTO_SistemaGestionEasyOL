@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Seguridad;
+namespace App\Http\Requests\Gente;
 
 use Illuminate\Foundation\Http\FormRequest;
 

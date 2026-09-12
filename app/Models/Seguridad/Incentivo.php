@@ -28,6 +28,11 @@ class Incentivo extends Model
         'total_3',
         'meta_3',
         'podium',
+        'valor_indicador_1',
+        'valor_indicador_2',
+        'valor_indicador_3',
+        'total_4',
+        'meta_4',
     ];
 
     protected function casts(): array
@@ -37,8 +42,13 @@ class Incentivo extends Model
             'meta_1'  => 'decimal:4',
             'total_2' => 'decimal:4',
             'meta_2'  => 'decimal:4',
-            'total_3' => 'decimal:4',
-            'meta_3'  => 'decimal:4',
+            'total_3'           => 'decimal:4',
+            'meta_3'            => 'decimal:4',
+            'valor_indicador_1' => 'decimal:4',
+            'valor_indicador_2' => 'decimal:4',
+            'valor_indicador_3' => 'decimal:4',
+            'total_4'           => 'decimal:4',
+            'meta_4'            => 'decimal:4',
         ];
     }
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\Gente\CorreccionMarcacionController;
 use App\Http\Controllers\Gente\DpoAcademyController;
 use App\Http\Controllers\Gente\FestivoCustomController;
 use App\Http\Controllers\Gente\GeovictoriaAsistenciaController;
+use App\Http\Controllers\Gente\IncentivosController;
 use App\Http\Controllers\Gente\LlamadoAtencionController;
 use App\Http\Controllers\Gente\PlanPremiacionController;
 use App\Http\Controllers\Gente\ReferenciaExternaController;
@@ -116,6 +117,10 @@ Route::middleware(['auth', 'active', 'role:Administrador|Gente'])
             ->name('responsable-ruta.inicio');
         Route::post('responsable-ruta/finalizacion', [ResponsableRutaController::class, 'storeFin'])
             ->name('responsable-ruta.finalizacion');
+
+        // Incentivos — importar
+        Route::post('incentivos/importar', [IncentivosController::class, 'store'])
+            ->name('incentivos.importar');
     });
 
 Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Reparto|Flota|Gente'])
@@ -173,6 +178,10 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Reparto|Flota
             ->name('sac.exportar');
         Route::get('sac/plantilla', [SacController::class, 'plantilla'])
             ->name('sac.plantilla');
+
+        // Incentivos — listado
+        Route::get('incentivos', [IncentivosController::class, 'index'])
+            ->name('incentivos.index');
     });
 
 Route::middleware(['auth', 'active', 'role:Administrador|Gente|Reparto'])

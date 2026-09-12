@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Seguridad;
+namespace App\Http\Controllers\Gente;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Seguridad\ImportarIncentivosRequest;
+use App\Http\Requests\Gente\ImportarIncentivosRequest;
 use App\Models\Seguridad\Incentivo;
-use App\Services\Seguridad\IncentivosImportService;
+use App\Services\Gente\IncentivosImportService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,8 +18,8 @@ class IncentivosController extends Controller
     public function index(): Response
     {
         $filtros = [
-            'mes'          => request('mes', ''),
-            'colaborador'  => request('colaborador', ''),
+            'mes'         => request('mes', ''),
+            'colaborador' => request('colaborador', ''),
         ];
 
         $incentivos = Incentivo::with('colaborador')
@@ -35,7 +35,7 @@ class IncentivosController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return Inertia::render('seguridad/incentivos/index', [
+        return Inertia::render('gente/incentivos/index', [
             'incentivos' => $incentivos,
             'filters'    => $filtros,
         ]);
@@ -65,6 +65,6 @@ class IncentivosController extends Controller
             default => 'success',
         };
 
-        return to_route('seguridad.incentivos.index')->with('status', ['message' => $mensaje, 'type' => $tipo]);
+        return to_route('gente.incentivos.index')->with('status', ['message' => $mensaje, 'type' => $tipo]);
     }
 }

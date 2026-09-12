@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Seguridad\AciConsultaSkapController;
 use App\Http\Controllers\Seguridad\AciController;
-use App\Http\Controllers\Seguridad\IncentivosController;
 use App\Http\Controllers\Seguridad\AciImportController;
 use App\Http\Controllers\Seguridad\AciIndicadorController;
 use App\Http\Controllers\Seguridad\AlcoholimetroController;
@@ -72,10 +71,6 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad'])
 
         Route::get('rutas-criticas', [RutaCriticaController::class, 'index'])
             ->name('rutas-criticas.index');
-
-        // Incentivos — ruta fija antes de cualquier comodín
-        Route::post('incentivos/importar', [IncentivosController::class, 'store'])->name('incentivos.importar');
-        Route::get('incentivos', [IncentivosController::class, 'index'])->name('incentivos.index');
 
         // Rutas específicas de "acis" antes del resource-like get('acis/{aci}')
         // para que no choquen con la ruta comodín.

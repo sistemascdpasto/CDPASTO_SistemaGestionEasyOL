@@ -28,7 +28,7 @@ export function ImportarIncentivosDialog({ trigger }: { trigger: React.ReactNode
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('seguridad.incentivos.importar'), {
+        post(route('gente.incentivos.importar'), {
             forceFormData: true,
             onSuccess: () => {
                 reset();
@@ -43,7 +43,7 @@ export function ImportarIncentivosDialog({ trigger }: { trigger: React.ReactNode
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Upload className="size-5 text-emerald-600 dark:text-emerald-400" />
+                        <Upload className="size-5 text-amber-600 dark:text-amber-400" />
                         Importar incentivos desde Excel
                     </DialogTitle>
                     <DialogDescription>

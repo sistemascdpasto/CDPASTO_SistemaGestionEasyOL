@@ -140,9 +140,9 @@ export const modules: ModuleDef[] = [
                     { title: 'Catálogo de Preguntas', slug: 'encuestas-morbilidad-preguntas', icon: ListChecks },
                 ],
             },
-            { title: 'Glosario', slug: 'glosario', icon: BookOpen },
-            { title: 'Mapa de Rutas Críticas', slug: 'rutas-criticas', icon: Map },
-            { title: 'Incentivos', slug: 'incentivos', icon: Gift },
+        // modules.ts — quitar de Seguridad, agregar en Gente
+        { title: 'Glosario', slug: 'glosario', icon: BookOpen },
+        { title: 'Mapa de Rutas Críticas', slug: 'rutas-criticas', icon: Map },
         ],
     },
     {
@@ -160,6 +160,7 @@ export const modules: ModuleDef[] = [
             { title: 'Ausentismo', slug: 'ausentismo', icon: CalendarDays },
             { title: 'SAC', slug: 'sac', icon: FileSpreadsheet },
             { title: 'Asistencia GeoVictoria', slug: 'asistencia-geovictoria', icon: Clock },
+            { title: 'Incentivos', slug: 'incentivos', icon: Gift },
         ],
     },
     {

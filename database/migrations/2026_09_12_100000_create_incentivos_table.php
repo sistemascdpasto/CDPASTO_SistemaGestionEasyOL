@@ -43,6 +43,13 @@ return new class extends Migration
             // Resultado final
             $table->string('podium', 150)->nullable();
 
+            // Valores por indicador y totalizador adicional
+            $table->decimal('valor_indicador_1', 10, 4)->nullable();
+            $table->decimal('valor_indicador_2', 10, 4)->nullable();
+            $table->decimal('valor_indicador_3', 10, 4)->nullable();
+            $table->decimal('total_4', 10, 4)->nullable();
+            $table->decimal('meta_4',  10, 4)->nullable();
+
             $table->timestamps();
 
             // Índice para facilitar búsquedas y evitar duplicados
