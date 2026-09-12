@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Enums\Role as RoleEnum;
 use App\Models\Seguridad\Colaborador;
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -22,16 +21,13 @@ class DatabaseSeeder extends Seeder
         $this->call(RecomendacionSeeder::class);
 
         $demoUsers = [
-            ['id_number' => '1000000001', 'first' => 'Brian', 'last' => 'Administrador', 'role' => RoleEnum::Administrador],
-            ['id_number' => '1000000002', 'first' => 'Samuel', 'last' => 'Seguridad', 'role' => RoleEnum::Seguridad],
-            // Pilar Reparto desactivado (ver config/modules.php): no se siembra
-            // su usuario de prueba mientras esté apagado.
-            ...(config('modules.reparto_habilitado')
-                ? [['id_number' => '1000000003', 'first' => 'Rita', 'last' => 'Reparto', 'role' => RoleEnum::Reparto]]
-                : []),
-            ['id_number' => '1000000004', 'first' => 'Gina', 'last' => 'Gente', 'role' => RoleEnum::Gente],
-            ['id_number' => '1000000005', 'first' => 'Felipe', 'last' => 'Flota', 'role' => RoleEnum::Flota],
-            ['id_number' => '1000000006', 'first' => 'Carlos', 'last' => 'Colaborador', 'role' => RoleEnum::Colaborador],
+            // Usuario de prueba principal — cédula y contraseña: 1233191710
+            ['id_number' => '1233191710', 'first' => 'Admin',  'last' => 'Prueba',        'role' => RoleEnum::Administrador],
+            ['id_number' => '1000000001', 'first' => 'Brian',  'last' => 'Administrador', 'role' => RoleEnum::Administrador],
+            ['id_number' => '1000000002', 'first' => 'Samuel', 'last' => 'Seguridad',     'role' => RoleEnum::Seguridad],
+            ['id_number' => '1000000004', 'first' => 'Gina',   'last' => 'Gente',         'role' => RoleEnum::Gente],
+            ['id_number' => '1000000005', 'first' => 'Felipe', 'last' => 'Flota',         'role' => RoleEnum::Flota],
+            ['id_number' => '1000000006', 'first' => 'Carlos', 'last' => 'Colaborador',   'role' => RoleEnum::Colaborador],
         ];
 
         foreach ($demoUsers as $demo) {
@@ -39,12 +35,12 @@ class DatabaseSeeder extends Seeder
 
             if (! $user) {
                 $user = User::factory()->create([
-                    'first_name' => $demo['first'],
-                    'last_name' => $demo['last'],
+                    'first_name'            => $demo['first'],
+                    'last_name'             => $demo['last'],
                     'identification_number' => $demo['id_number'],
-                    'email' => strtolower("{$demo['first']}@adenar.test"),
-                    'password' => 'password',
-                    'is_active' => true,
+                    'email'                 => strtolower("{$demo['first']}@easy.test"),
+                    'password'              => $demo['id_number'],
+                    'is_active'             => true,
                 ]);
             }
 
@@ -56,12 +52,12 @@ class DatabaseSeeder extends Seeder
                 Colaborador::firstOrCreate(
                     ['user_id' => $user->id],
                     [
-                        'cedula' => $demo['id_number'],
-                        'nombres' => $demo['first'],
+                        'cedula'    => $demo['id_number'],
+                        'nombres'   => $demo['first'],
                         'apellidos' => $demo['last'],
-                        'cargo' => 'Conductor',
-                        'turno' => 'manana',
-                        'area' => 'Ruta Norte',
+                        'cargo'     => 'Conductor',
+                        'turno'     => 'manana',
+                        'area'      => 'Ruta Norte',
                         'is_active' => true,
                     ]
                 );

@@ -6,6 +6,7 @@ import {
     BellRing,
     BookOpen,
     CalendarDays,
+    Gift,
     Car,
     ClipboardCheck,
     ClipboardList,
@@ -140,8 +141,8 @@ export const modules: ModuleDef[] = [
                 ],
             },
             { title: 'Glosario', slug: 'glosario', icon: BookOpen },
-
             { title: 'Mapa de Rutas Críticas', slug: 'rutas-criticas', icon: Map },
+            { title: 'Incentivos', slug: 'incentivos', icon: Gift },
         ],
     },
     {
