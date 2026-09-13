@@ -4,7 +4,6 @@ use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureGeovictoriaApiToken;
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\EnsureSimitApiToken;
-use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -27,18 +26,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
-        // ForceHttps va al PRINCIPIO del grupo web/api, no del stack global:
-        // el stack global corre TrustProxies primero (interpreta el
-        // X-Forwarded-Proto que manda Railway), y solo después de eso
-        // $request->secure() refleja la conexión real del navegador. Si
-        // ForceHttps corriera antes de TrustProxies (vía prepend() global),
-        // siempre vería la conexión interna como HTTP y redirigiría en
-        // bucle infinito.
-        $middleware->web(prepend: [ForceHttps::class], append: [
+        // NOTA (2026-09-14): hubo un ForceHttps aquí (mismo bug que en
+        // ADENAR) que causó ERR_TOO_MANY_REDIRECTS en producción. Se quita
+        // por completo hasta diagnosticar con datos reales de producción en
+        // vez de asumir cómo reenvía Railway las cabeceras. Railway ya sirve
+        // el dominio *.up.railway.app solo por HTTPS de cara al usuario.
+        $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
-        $middleware->api(prepend: [ForceHttps::class]);
 
         $middleware->alias([
             'active' => EnsureAccountIsActive::class,
