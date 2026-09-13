@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Gente\ChecklistPlanPremiacion;
 use App\Models\Seguridad\Aci;
 use App\Models\Seguridad\Colaborador;
+use App\Models\Seguridad\Incentivo;
 use App\Services\Seguridad\EvaluacionCalculator;
 use App\Services\Seguridad\IndiceRiesgoCalculator;
 use Carbon\Carbon;
@@ -245,6 +246,62 @@ class PortalController extends Controller
             'mes' => $mes,
             'anio' => $anio,
             'umbral_checklist' => $umbralCl,
+        ]);
+    }
+
+    public function misIncentivos(Request $request): Response
+    {
+        $colaborador = $this->colaboradorDeOFallar($request);
+
+        $desde = $request->get('desde');
+        $hasta = $request->get('hasta');
+
+        $incentivos = Incentivo::where('colaborador_id', $colaborador->id)
+            ->when($desde, fn ($q) => $q->whereDate('created_at', '>=', $desde))
+            ->when($hasta, fn ($q) => $q->whereDate('created_at', '<=', $hasta))
+            ->orderByDesc('created_at')
+            ->get();
+
+        return Inertia::render('colaborador/incentivos/index', [
+            'colaborador' => [
+                'id'              => $colaborador->id,
+                'nombre_completo' => $colaborador->nombre_completo,
+                'cedula'          => $colaborador->cedula,
+                'cargo'           => $colaborador->cargo ?? 'Sin cargo',
+                'area'            => $colaborador->area ?? '',
+                'imagen'          => $colaborador->imagen ?? null,
+            ],
+            'incentivos' => $incentivos,
+            'desde'      => $desde ?? '',
+            'hasta'      => $hasta ?? '',
+        ]);
+    }
+
+    public function miVariable(Request $request): Response
+    {
+        $colaborador = $this->colaboradorDeOFallar($request);
+
+        $desde = $request->get('desde');
+        $hasta = $request->get('hasta');
+
+        $incentivos = Incentivo::where('colaborador_id', $colaborador->id)
+            ->when($desde, fn ($q) => $q->whereDate('created_at', '>=', $desde))
+            ->when($hasta, fn ($q) => $q->whereDate('created_at', '<=', $hasta))
+            ->orderByDesc('created_at')
+            ->get();
+
+        return Inertia::render('colaborador/variable/index', [
+            'colaborador' => [
+                'id'              => $colaborador->id,
+                'nombre_completo' => $colaborador->nombre_completo,
+                'cedula'          => $colaborador->cedula,
+                'cargo'           => $colaborador->cargo ?? 'Sin cargo',
+                'area'            => $colaborador->area ?? '',
+                'imagen'          => $colaborador->imagen ?? null,
+            ],
+            'incentivos' => $incentivos,
+            'desde'      => $desde ?? '',
+            'hasta'      => $hasta ?? '',
         ]);
     }
 

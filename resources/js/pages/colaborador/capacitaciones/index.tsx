@@ -1,4 +1,5 @@
 ﻿import { FileIcon, getFileCategoryInfo } from '@/components/capacitaciones/file-icon';
+import { type BreadcrumbItem } from '@/types';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -97,57 +98,56 @@ function esImagen(item: MediaItem): boolean {
     return item.tipo === 'imagen' || !!item.mime_type?.startsWith('image/');
 }
 
-// ── Carrusel de media ─────────────────────────────────────────────────────
+// ── Carrusel de media con slide horizontal ────────────────────────────────
 function CarruselMedia({ items }: { items: MediaItem[] }) {
-    const [idx, setIdx] = useState(0);
+    const [idx, setIdx]         = useState(0);
+    const [prev_, setPrev]      = useState<number | null>(null);
+    const [dir, setDir]         = useState<'left' | 'right'>('left');
+    const [animating, setAnim]  = useState(false);
     const [playing, setPlaying] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const total = items.length;
 
-    // Al cambiar de slide pausamos cualquier video anterior
-    const goTo = (nuevoIdx: number) => {
-        if (videoRef.current) {
-            videoRef.current.pause();
-        }
+    const goTo = (nuevoIdx: number, direction: 'left' | 'right' = 'left') => {
+        if (animating || nuevoIdx === idx) return;
+        if (videoRef.current) videoRef.current.pause();
         setPlaying(false);
+        setDir(direction);
+        setPrev(idx);
         setIdx(nuevoIdx);
+        setAnim(true);
+        setTimeout(() => { setPrev(null); setAnim(false); }, 500);
     };
 
-    const prev = () => goTo((idx - 1 + total) % total);
-    const next = () => goTo((idx + 1) % total);
+    const goPrev = () => goTo((idx - 1 + total) % total, 'right');
+    const goNext = () => goTo((idx + 1) % total, 'left');
 
-    // Auto-avance solo si hay varios y no hay video reproduciéndose
+    // Auto-avance solo si no hay video reproduciendo
     useEffect(() => {
         if (total <= 1 || playing) return;
-        const t = setTimeout(() => setIdx((i) => (i + 1) % total), 5000);
+        const t = setTimeout(() => goNext(), 5000);
         return () => clearTimeout(t);
     }, [idx, total, playing]);
 
     if (total === 0) return null;
 
-    const item = items[idx];
-
-    const renderMedia = () => {
-        // Video local
+    const renderItem = (item: MediaItem, role: 'current' | 'prev') => {
         if (esVideoLocal(item)) {
             return (
                 <video
-                    ref={videoRef}
+                    ref={role === 'current' ? videoRef : undefined}
                     key={item.id}
                     src={item.archivo_url!}
                     className="h-full w-full object-contain bg-black"
-                    controls
+                    controls={role === 'current'}
+                    autoPlay={role === 'current'}
+                    muted
                     onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
-                    onEnded={() => {
-                        setPlaying(false);
-                        if (total > 1) setTimeout(() => next(), 800);
-                    }}
+                    onEnded={() => setPlaying(false)}
                 />
             );
         }
-
-        // YouTube
         if (esYoutube(item)) {
             const vid = youtubeId(item.enlace_externo!);
             return (
@@ -161,52 +161,64 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
                 />
             );
         }
-
-        // Imagen
         if (esImagen(item) && item.archivo_url) {
-            return (
-                <img
-                    key={item.id}
-                    src={item.archivo_url}
-                    alt={item.titulo}
-                    className="h-full w-full object-contain bg-black"
-                />
-            );
+            return <img key={item.id} src={item.archivo_url} alt={item.titulo} className="h-full w-full object-cover" />;
         }
-
-        // Fallback
         return (
-            <div className="flex h-full w-full items-center justify-center bg-slate-100">
+            <div key={item.id} className="flex h-full w-full items-center justify-center bg-slate-800">
                 <p className="text-slate-400 text-sm">{item.titulo}</p>
             </div>
         );
     };
 
+    // Clases de animación para el slide que entra (current) y el que sale (prev)
+    const enterCls = animating
+        ? dir === 'left'
+            ? 'animate-slide-in-right'
+            : 'animate-slide-in-left'
+        : '';
+    const exitCls = animating
+        ? dir === 'left'
+            ? 'animate-slide-out-left'
+            : 'animate-slide-out-right'
+        : 'hidden';
+
     return (
         <section className="space-y-3">
+            <style>{`
+                @keyframes slideInRight  { from { transform: translateX(100%); } to { transform: translateX(0); } }
+                @keyframes slideInLeft   { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+                @keyframes slideOutLeft  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+                @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+                .animate-slide-in-right  { animation: slideInRight  0.5s cubic-bezier(.4,0,.2,1) forwards; }
+                .animate-slide-in-left   { animation: slideInLeft   0.5s cubic-bezier(.4,0,.2,1) forwards; }
+                .animate-slide-out-left  { animation: slideOutLeft  0.5s cubic-bezier(.4,0,.2,1) forwards; }
+                .animate-slide-out-right { animation: slideOutRight 0.5s cubic-bezier(.4,0,.2,1) forwards; }
+            `}</style>
 
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-md mx-auto w-full max-w-2xl"
-                 style={{ aspectRatio: '16/9' }}>
+            <div
+                className="relative overflow-hidden rounded-2xl bg-black shadow-lg w-full"
+                style={{ aspectRatio: '16/9' }}
+            >
+                {/* Slide que sale */}
+                {prev_ !== null && (
+                    <div className={`absolute inset-0 ${exitCls}`}>
+                        {renderItem(items[prev_], 'prev')}
+                    </div>
+                )}
 
-                {/* Media */}
-                <div className="absolute inset-0">{renderMedia()}</div>
+                {/* Slide que entra (actual) */}
+                <div className={`absolute inset-0 ${enterCls}`}>
+                    {renderItem(items[idx], 'current')}
+                </div>
 
-                {/* Gradient inferior — sin título */}
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-12" />
-
-                {/* Flechas — solo si hay más de 1 */}
+                {/* Flechas */}
                 {total > 1 && (
                     <>
-                        <button
-                            onClick={prev}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
-                        >
+                        <button onClick={goPrev} className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/70">
                             <svg xmlns="http://www.w3.org/2000/svg" className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button
-                            onClick={next}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/60"
-                        >
+                        <button onClick={goNext} className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition hover:bg-black/70">
                             <svg xmlns="http://www.w3.org/2000/svg" className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                         </button>
                     </>
@@ -214,27 +226,23 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
 
                 {/* Dots */}
                 {total > 1 && (
-                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 flex gap-1.5">
                         {items.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => goTo(i)}
-                                className={`size-2 rounded-full transition-all ${i === idx ? 'bg-white scale-125' : 'bg-white/40'}`}
+                            <button key={i} onClick={() => goTo(i, i > idx ? 'left' : 'right')}
+                                className={`rounded-full transition-all duration-300 ${i === idx ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/70'}`}
                             />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Miniaturas si hay más de 1 */}
+            {/* Miniaturas */}
             {total > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
                     {items.map((it, i) => (
-                        <button
-                            key={it.id}
-                            onClick={() => goTo(i)}
+                        <button key={it.id} onClick={() => goTo(i, i > idx ? 'left' : 'right')}
                             className={`relative shrink-0 h-16 w-28 overflow-hidden rounded-lg border-2 transition-all ${
-                                i === idx ? 'border-emerald-500 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
+                                i === idx ? 'border-emerald-500 shadow-md scale-105' : 'border-transparent opacity-50 hover:opacity-90'
                             }`}
                         >
                             {esImagen(it) && it.archivo_url ? (
@@ -244,7 +252,6 @@ function CarruselMedia({ items }: { items: MediaItem[] }) {
                                     {esYoutube(it) ? '▶ YT' : esVideoLocal(it) ? '▶' : '🖼'}
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                         </button>
                     ))}
                 </div>
@@ -414,11 +421,6 @@ export default function CentroCapacitacionesIndex({
                             {/* Columna izquierda: texto */}
                             <div className="space-y-6">
                                 {/* Chip */}
-                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-                                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    Portal de Aprendizaje
-                                </span>
-
                                 {/* Título */}
                                 <div>
                                     <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
@@ -429,41 +431,14 @@ export default function CentroCapacitacionesIndex({
                                     </p>
                                 </div>
 
-                                {/* CTA + Buscador */}
-                                <div className="space-y-3">
-                                    <form onSubmit={handleBuscar} className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
-                                            <Input
-                                                placeholder="Buscar cursos, temas…"
-                                                value={busqueda}
-                                                onChange={(e) => setBusqueda(e.target.value)}
-                                                className="h-11 border-white/10 bg-white/10 pl-9 pr-4 text-white placeholder:text-white/40 focus-visible:ring-emerald-500"
-                                            />
-                                        </div>
-                                        <Button type="submit" className="h-11 bg-emerald-500 px-5 font-bold text-white hover:bg-emerald-400">
-                                            Buscar
-                                        </Button>
-                                        {busqueda && (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={limpiarBusqueda}
-                                                className="h-11 px-3 text-white/60 hover:text-white"
-                                            >
-                                                <X className="size-4" />
-                                            </Button>
-                                        )}
-                                    </form>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <Link
-                                            href="#cursos"
-                                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-400 hover:shadow-lg hover:shadow-emerald-500/30"
-                                        >
-                                            <Rocket className="size-4" /> Explorar cursos →
-                                        </Link>
-                                    </div>
+                                {/* CTA */}
+                                <div>
+                                    <Link
+                                        href="#cursos"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-400 hover:shadow-lg hover:shadow-emerald-500/30"
+                                    >
+                                        <Rocket className="size-4" /> Explorar cursos →
+                                    </Link>
                                 </div>
 
                                 {/* Stats en fila */}
@@ -524,7 +499,7 @@ export default function CentroCapacitacionesIndex({
                 {/* ══════════════════════════════════════════
                     CONTENIDO PRINCIPAL — sube y tapa el hero
                 ══════════════════════════════════════════ */}
-                <div className="relative z-10 -mt-8 bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+                <div className="relative z-10 -mt-8 bg-sidebar shadow-[0_-8px_24px_rgba(0,0,0,0.15)]">
                 <div className="mx-auto max-w-7xl space-y-12 px-4 pt-10 pb-10 sm:px-6">
 
                     {/* Resultados de búsqueda global */}
@@ -618,6 +593,67 @@ export default function CentroCapacitacionesIndex({
                     {mediaCarrusel.length > 0 && (
                         <CarruselMedia items={mediaCarrusel} />
                     )}
+
+                    {/* ── Título + buscador + chips de carpetas ── */}
+                    <div className="px-4 pt-4 sm:px-10">
+                        {/* Fila: texto izq + buscador der */}
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            {/* Texto */}
+                            <div>
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Portal de Aprendizaje
+                                </span>
+                                <h2 className="mt-3 text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl">
+                                    Mi Centro de<br />
+                                    <span className="text-4xl text-emerald-500 sm:text-5xl">Capacitaciones</span>
+                                </h2>
+                            </div>
+
+                            {/* Buscador */}
+                            <form onSubmit={handleBuscar} className="flex w-full shrink-0 items-center gap-2 sm:w-80 sm:self-center">
+                                <div className="relative flex-1">
+                                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                                    <Input
+                                        placeholder="Buscar carpetas, temas o materiales…"
+                                        value={busqueda}
+                                        onChange={(e) => setBusqueda(e.target.value)}
+                                        className="h-10 pl-9 pr-4 text-sm"
+                                    />
+                                </div>
+                                <Button type="submit" className="h-10 bg-emerald-600 px-4 font-bold text-white hover:bg-emerald-500">
+                                    Buscar
+                                </Button>
+                                {busqueda && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={limpiarBusqueda} className="h-10 w-10 text-slate-400 hover:text-slate-700">
+                                        <X className="size-4" />
+                                    </Button>
+                                )}
+                            </form>
+                        </div>
+
+                        {/* Chips de carpetas */}
+                        {carpetas.length > 0 && (
+                            <div className="mt-5 flex flex-wrap gap-2">
+                                <span className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white">
+                                    Todos
+                                </span>
+                                {carpetas.map((c) => (
+                                    <a
+                                        key={c.id}
+                                        href="#cursos"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            document.getElementById('cursos')?.scrollIntoView({ behavior: 'smooth' });
+                                        }}
+                                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                                    >
+                                        {c.nombre}
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Catálogo de cursos */}
                     <section id="cursos" className="space-y-5 scroll-mt-8">

@@ -13,6 +13,8 @@ import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     BellRing,
+    DollarSign,
+    Gift,
     GraduationCap,
     HeartPulse,
     LayoutGrid,
@@ -92,6 +94,8 @@ export function AppSidebar() {
                   { title: 'Mi Perfil', url: '/portal/perfil', icon: User, color: '#3F7A22' },
                   { title: 'Mis Pruebas', url: '/portal/pruebas', icon: TestTube, color: '#3F7A22' },
                   { title: 'Mi Plan Premiación', url: '/portal/mi-plan-premiacion', icon: Trophy, color: '#D97706' },
+                  { title: 'Mis Incentivos', url: '/portal/mis-incentivos', icon: Gift, color: '#D97706' },
+                  { title: 'Mi Variable', url: '/portal/mi-variable', icon: DollarSign, color: '#D97706' },
                   { title: 'Condición de Salud', url: '/portal/condicion-salud', icon: HeartPulse, color: '#3F7A22' },
                   { title: 'Encuesta de Morbilidad', url: '/portal/encuesta-morbilidad', icon: Stethoscope, color: '#3F7A22' },
                   { title: 'Mis Capacitaciones', url: '/portal/capacitaciones', icon: GraduationCap, color: '#0D9488' },

@@ -15,6 +15,8 @@ Route::middleware(['auth', 'active', 'role:Colaborador|Administrador|Seguridad']
         Route::get('pruebas', [PortalController::class, 'pruebas'])->name('pruebas');
 
         Route::get('mi-plan-premiacion', [PortalController::class, 'miPlanPremiacion'])->name('mi-plan-premiacion');
+        Route::get('mis-incentivos', [PortalController::class, 'misIncentivos'])->name('mis-incentivos');
+        Route::get('mi-variable', [PortalController::class, 'miVariable'])->name('mi-variable');
         Route::get('alertas', [PortalController::class, 'alertas'])->name('alertas');
         Route::get('condicion-salud', [CondicionSaludController::class, 'create'])->name('condicion-salud');
         Route::post('condicion-salud', [CondicionSaludController::class, 'store'])->name('condicion-salud.store');
