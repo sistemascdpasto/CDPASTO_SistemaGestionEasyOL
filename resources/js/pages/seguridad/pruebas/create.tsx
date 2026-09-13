@@ -284,10 +284,14 @@ export default function CreatePrueba({
     colaboradores,
     dispositivosDisponibles,
     prueba,
+    firmasPorColaborador = {},
+    alcoholimetroSugerido,
 }: {
     colaboradores: ColaboradorOption[];
     dispositivosDisponibles: DispositivoOption[];
     prueba?: PruebaData;
+    firmasPorColaborador?: Record<number, string>;
+    alcoholimetroSugerido?: number | null;
 }) {
     const breadcrumbs: BreadcrumbItem[] = prueba
         ? [...breadcrumbsBase, { title: 'Editar prueba', href: `/modules/seguridad/pruebas/${prueba.id}/edit` }]
@@ -298,7 +302,9 @@ export default function CreatePrueba({
         turno: prueba?.turno ?? '',
         es_programacion: prueba ? prueba.estado === 'programada' : false,
         programada_en: prueba?.programada_en ? String(prueba.programada_en) : '',
-        alcoholimetro_id: prueba?.alcoholimetro_id ? String(prueba.alcoholimetro_id) : '',
+        alcoholimetro_id: prueba?.alcoholimetro_id
+            ? String(prueba.alcoholimetro_id)
+            : (alcoholimetroSugerido ? String(alcoholimetroSugerido) : ''),
         resultado: prueba?.resultado ? String(prueba.resultado) : '0',
         consentimiento_aceptado: prueba?.consentimiento_aceptado ?? false,
         evidencia: [],

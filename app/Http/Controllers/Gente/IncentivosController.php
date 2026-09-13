@@ -15,13 +15,15 @@ class IncentivosController extends Controller
     public function index(): Response
     {
         $filtros = [
-            'mes'          => request('mes', ''),
+            'desde'        => request('desde', ''),
+            'hasta'        => request('hasta', ''),
             'colaborador'  => request('colaborador', ''),
             'cargo'        => request('cargo', ''),
         ];
 
         $incentivos = Incentivo::with('colaborador')
-            ->when($filtros['mes'], fn ($q) => $q->where('mes', $filtros['mes']))
+            ->when($filtros['desde'], fn ($q) => $q->whereDate('created_at', '>=', $filtros['desde']))
+            ->when($filtros['hasta'], fn ($q) => $q->whereDate('created_at', '<=', $filtros['hasta']))
             ->when($filtros['cargo'], fn ($q) => $q->where('cargo', 'like', '%' . $filtros['cargo'] . '%'))
             ->when($filtros['colaborador'], function ($q) use ($filtros) {
                 $term = $filtros['colaborador'];
@@ -35,19 +37,17 @@ class IncentivosController extends Controller
                         });
                 });
             })
+            ->orderByDesc('total_1')
             ->orderByDesc('created_at')
             ->paginate(50)
             ->withQueryString();
 
-        // Opciones únicas para los selects
-        $meses  = Incentivo::whereNotNull('mes')->distinct()->orderBy('mes')->pluck('mes');
         $cargos = Incentivo::whereNotNull('cargo')->distinct()->orderBy('cargo')->pluck('cargo');
 
         return Inertia::render('gente/incentivos/index', [
             'incentivos' => $incentivos,
             'filters'    => $filtros,
             'opciones'   => [
-                'meses'  => $meses,
                 'cargos' => $cargos,
             ],
         ]);
@@ -78,6 +78,7 @@ class IncentivosController extends Controller
                         });
                 });
             })
+            ->orderByDesc('total_4')
             ->orderByDesc('created_at')
             ->paginate(50)
             ->withQueryString();

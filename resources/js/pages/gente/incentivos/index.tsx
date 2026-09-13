@@ -64,13 +64,13 @@ interface IncentivosPaginator {
 }
 
 interface Filtros {
-    mes: string;
+    desde: string;
+    hasta: string;
     colaborador: string;
     cargo: string;
 }
 
 interface Opciones {
-    meses: string[];
     cargos: string[];
 }
 
@@ -213,7 +213,8 @@ export default function IncentivosIndex({
     opciones: Opciones;
 }) {
     const [form, setForm] = useState<Filtros>({
-        mes:         filters.mes         ?? '',
+        desde:       filters.desde       ?? '',
+        hasta:       filters.hasta       ?? '',
         colaborador: filters.colaborador ?? '',
         cargo:       filters.cargo       ?? '',
     });
@@ -248,25 +249,40 @@ export default function IncentivosIndex({
                     />
                 </div>
 
-                {/* Filtros — 1 col móvil, 3 col desktop */}
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <SearchSelect
-                        placeholder="Mes"
-                        value={form.mes}
-                        options={opciones.meses}
-                        onChange={(v) => setForm({ ...form, mes: v })}
-                    />
-                    <Input
-                        placeholder="Nombre o identificación"
-                        value={form.colaborador}
-                        onChange={(e) => setForm({ ...form, colaborador: e.target.value })}
-                    />
-                    <SearchSelect
-                        placeholder="Cargo"
-                        value={form.cargo}
-                        options={opciones.cargos}
-                        onChange={(v) => setForm({ ...form, cargo: v })}
-                    />
+                {/* Filtros */}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase text-muted-foreground">Desde</label>
+                        <input type="date" value={form.desde}
+                            onChange={(e) => setForm({ ...form, desde: e.target.value })}
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold uppercase text-muted-foreground">Hasta</label>
+                        <input type="date" value={form.hasta}
+                            onChange={(e) => setForm({ ...form, hasta: e.target.value })}
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1 lg:min-w-[200px]">
+                        <label className="text-[10px] font-semibold uppercase text-muted-foreground">Colaborador</label>
+                        <Input
+                            placeholder="Nombre o identificación"
+                            value={form.colaborador}
+                            onChange={(e) => setForm({ ...form, colaborador: e.target.value })}
+                            className="h-9"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1 lg:min-w-[180px]">
+                        <label className="text-[10px] font-semibold uppercase text-muted-foreground">Cargo</label>
+                        <SearchSelect placeholder="Cargo" value={form.cargo} options={opciones.cargos}
+                            onChange={(v) => setForm({ ...form, cargo: v })} />
+                    </div>
+                    {(form.desde || form.hasta || form.colaborador || form.cargo) && (
+                        <button onClick={() => setForm({ desde: '', hasta: '', colaborador: '', cargo: '' })}
+                            className="flex h-9 items-center gap-1 self-end rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:text-foreground sm:col-span-2 lg:col-span-1">
+                            <X className="size-3.5" /> Limpiar
+                        </button>
+                    )}
                 </div>
 
                 {/* Pódium */}

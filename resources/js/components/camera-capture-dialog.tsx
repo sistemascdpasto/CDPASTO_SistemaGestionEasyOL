@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, RefreshCw, TriangleAlert } from 'lucide-react';
+import { Camera, FlipHorizontal2, RefreshCw, Timer, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Diálogo para tomar una fotografía con la cámara del dispositivo y devolverla
- * como `File` (JPEG). En equipos sin cámara o sin permiso, ofrece el selector
- * de archivos del sistema con `capture` (que en móvil abre la cámara nativa).
+ * como `File` (JPEG). Incluye:
+ * - Temporizador configurable: 0 (inmediato), 5, 10 o 15 segundos.
+ * - Cambio de cámara: frontal ↔ trasera.
+ * - Fallback al selector de archivos si el navegador no soporta getUserMedia.
  */
 export function CameraCaptureDialog({
     open,
@@ -19,19 +21,27 @@ export function CameraCaptureDialog({
     onCapture: (file: File) => void;
     titulo?: string;
 }) {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const streamRef = useRef<MediaStream | null>(null);
+    const videoRef        = useRef<HTMLVideoElement>(null);
+    const streamRef       = useRef<MediaStream | null>(null);
     const fallbackInputRef = useRef<HTMLInputElement>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [listo, setListo] = useState(false);
+    const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const [error, setError]           = useState<string | null>(null);
+    const [listo, setListo]           = useState(false);
+    const [facing, setFacing]         = useState<'environment' | 'user'>('environment');
+    const [temporizador, setTemp]     = useState<0 | 5 | 10 | 15>(0);
+    const [cuenta, setCuenta]         = useState<number | null>(null); // null = no activo
 
     const detener = useCallback(() => {
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
         setListo(false);
+        if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+        setCuenta(null);
     }, []);
 
-    const iniciar = useCallback(async () => {
+    const iniciar = useCallback(async (facingMode: 'environment' | 'user' = facing) => {
+        detener();
         setError(null);
         setListo(false);
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -40,7 +50,7 @@ export function CameraCaptureDialog({
         }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' } },
+                video: { facingMode: { ideal: facingMode } },
                 audio: false,
             });
             streamRef.current = stream;
@@ -52,28 +62,32 @@ export function CameraCaptureDialog({
         } catch {
             setError('No se pudo acceder a la cámara. Revisa los permisos del navegador o adjunta una foto desde el archivo.');
         }
-    }, []);
+    }, [facing, detener]);
 
+    // Abrir/cerrar diálogo
     useEffect(() => {
-        if (open) {
-            void iniciar();
-        } else {
-            detener();
-        }
+        if (open) { void iniciar(facing); }
+        else       { detener(); }
         return () => detener();
-    }, [open, iniciar, detener]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
-    const capturar = () => {
+    // Cambiar de cámara
+    const flipCamara = () => {
+        const nuevo = facing === 'environment' ? 'user' : 'environment';
+        setFacing(nuevo);
+        void iniciar(nuevo);
+    };
+
+    // Captura inmediata
+    const capturarAhora = () => {
         const video = videoRef.current;
         if (!video || !video.videoWidth) return;
-
-        // Se reescala el fotograma para que la evidencia pese poco (el backend
-        // limita a 5 MB) sin perder legibilidad.
         const MAX_LADO = 1920;
-        const escala = Math.min(1, MAX_LADO / Math.max(video.videoWidth, video.videoHeight));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(video.videoWidth * escala);
-        canvas.height = Math.round(video.videoHeight * escala);
+        const escala   = Math.min(1, MAX_LADO / Math.max(video.videoWidth, video.videoHeight));
+        const canvas   = document.createElement('canvas');
+        canvas.width   = Math.round(video.videoWidth  * escala);
+        canvas.height  = Math.round(video.videoHeight * escala);
         canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(
             (blob) => {
@@ -86,17 +100,39 @@ export function CameraCaptureDialog({
         );
     };
 
+    // Captura con o sin temporizador
+    const capturar = () => {
+        if (temporizador === 0) { capturarAhora(); return; }
+
+        setCuenta(temporizador);
+        let restante = temporizador;
+        countdownRef.current = setInterval(() => {
+            restante -= 1;
+            setCuenta(restante);
+            if (restante <= 0) {
+                clearInterval(countdownRef.current!);
+                countdownRef.current = null;
+                setCuenta(null);
+                capturarAhora();
+            }
+        }, 1000);
+    };
+
+    const cancelarCuenta = () => {
+        if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+        setCuenta(null);
+    };
+
     const desdeArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            onCapture(file);
-            onOpenChange(false);
-        }
+        if (file) { onCapture(file); onOpenChange(false); }
         e.target.value = '';
     };
 
+    const OPCIONES_TIMER: (0 | 5 | 10 | 15)[] = [0, 5, 10, 15];
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={(v) => { cancelarCuenta(); onOpenChange(v); }}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>{titulo}</DialogTitle>
@@ -109,8 +145,53 @@ export function CameraCaptureDialog({
                             {error}
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-lg border border-border bg-black">
+                        <div className="relative overflow-hidden rounded-lg border border-border bg-black">
                             <video ref={videoRef} playsInline muted className="aspect-video w-full object-cover" />
+
+                            {/* Cuenta regresiva superpuesta */}
+                            {cuenta !== null && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-7xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                                        {cuenta}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Controles: temporizador + flip */}
+                    {!error && (
+                        <div className="flex items-center justify-between gap-2">
+                            {/* Selector de temporizador */}
+                            <div className="flex items-center gap-1">
+                                <Timer className="size-4 shrink-0 text-muted-foreground" />
+                                {OPCIONES_TIMER.map((s) => (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setTemp(s)}
+                                        className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                            temporizador === s
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-muted text-muted-foreground hover:bg-accent'
+                                        }`}
+                                    >
+                                        {s === 0 ? 'Off' : `${s}s`}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Cambiar cámara */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                title={facing === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+                                onClick={flipCamara}
+                                disabled={!listo}
+                            >
+                                <FlipHorizontal2 className="size-4" />
+                            </Button>
                         </div>
                     )}
 
@@ -120,15 +201,20 @@ export function CameraCaptureDialog({
                         <Button type="button" variant="outline" onClick={() => fallbackInputRef.current?.click()}>
                             Adjuntar desde archivo
                         </Button>
+
                         {error ? (
-                            <Button type="button" variant="secondary" onClick={() => void iniciar()}>
+                            <Button type="button" variant="secondary" onClick={() => void iniciar(facing)}>
                                 <RefreshCw className="size-4" />
                                 Reintentar cámara
+                            </Button>
+                        ) : cuenta !== null ? (
+                            <Button type="button" variant="destructive" onClick={cancelarCuenta}>
+                                Cancelar ({cuenta}s)
                             </Button>
                         ) : (
                             <Button type="button" onClick={capturar} disabled={!listo}>
                                 <Camera className="size-4" />
-                                Capturar
+                                {temporizador === 0 ? 'Capturar' : `Capturar en ${temporizador}s`}
                             </Button>
                         )}
                     </div>

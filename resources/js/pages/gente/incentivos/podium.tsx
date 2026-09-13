@@ -297,63 +297,7 @@ export function PodiumIncentivos({ incentivos }: Props) {
                 </div>
             )}
 
-            {/* Clasificación 4+ */}
-            {resto.length > 0 && (
-                <div className="mt-4">
-                    <p className="mb-2 text-xs font-semibold text-slate-500 flex items-center gap-1">
-                        <span>📋</span> Clasificación completa
-                    </p>
-                    <div className="flex flex-col gap-1.5">
-                        {resto.map((item, idx) => {
-                            const nombre = nombreCompleto(item);
-                            const ini = initials(nombre);
-                            const pts = score(item);
-                            const isAct = seleccionado === item.id;
-
-                            const mini = [
-                                { v: item.valor_indicador_1, m: item.meta_1, vf: item.total_1 },
-                                { v: item.valor_indicador_2, m: item.meta_2, vf: item.total_2 },
-                                { v: item.valor_indicador_3, m: item.meta_3, vf: item.total_3 },
-                            ].filter((x) => n(x.v) > 0 || n(x.vf) > 0);
-
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setSeleccionado(isAct ? null : item.id)}
-                                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left
-                                        cursor-pointer transition-all duration-200
-                                        ${isAct ? 'border-blue-300 bg-blue-50 shadow-sm' : 'border-slate-100 bg-white hover:border-blue-200 hover:bg-blue-50/40'}`}
-                                >
-                                    <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-400">{idx + 4}</span>
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                                        {ini}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-semibold text-slate-700">{nombre}</p>
-                                        <p className="text-[11px] text-slate-400">{item.cargo}</p>
-                                    </div>
-                                    <div className="hidden sm:flex gap-3">
-                                        {mini.map((x, i) => {
-                                            const val = n(x.v) || n(x.vf);
-                                            const met = n(x.m);
-                                            const p = val > 0 && met > 0 ? Math.round((val / met) * 100) : null;
-                                            const ok = p !== null && p >= 100;
-                                            return (
-                                                <span key={i} className={`text-xs font-bold ${ok ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                                    {val > 0 ? val.toLocaleString('es-CO', { maximumFractionDigits: 1 }) : '—'}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
-                                    <span className="ml-3 shrink-0 text-base font-black text-blue-600">
-                                        {pts > 0 ? pts.toLocaleString('es-CO', { maximumFractionDigits: 1 }) : '—'}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* Clasificación 4+ eliminada */}
         </div>
     );
 }

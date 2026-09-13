@@ -206,7 +206,7 @@ function GraficaVariableMensual({ data }: { data: IncentivoRow[] }) {
                         width={72}
                     />
                     <Tooltip
-                        formatter={(value: number, name: string) => [fmt(value), name]}
+                        formatter={(value) => [fmt(Number(value ?? 0)), '']}
                         contentStyle={{ fontSize: 12, borderRadius: 8 }}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -351,7 +351,7 @@ export default function IncentivosVariable({
 
     useEffect(() => {
         if (isFirst.current) { isFirst.current = false; return; }
-        router.get(route('gente.incentivos.variable'), debouncedForm, { preserveState: true, replace: true });
+        router.get(route('gente.incentivos.variable'), debouncedForm as unknown as Record<string, string>, { preserveState: true, replace: true });
     }, [JSON.stringify(debouncedForm)]);
 
     return (
@@ -370,33 +370,33 @@ export default function IncentivosVariable({
                 </div>
 
                 {/* Filtros */}
-                <div className="flex flex-wrap items-end gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
                     <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase text-muted-foreground">Desde</label>
                         <input type="date" value={form.desde}
                             onChange={(e) => setForm({ ...form, desde: e.target.value })}
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                     </div>
                     <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase text-muted-foreground">Hasta</label>
                         <input type="date" value={form.hasta}
                             onChange={(e) => setForm({ ...form, hasta: e.target.value })}
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                     </div>
-                    <div className="flex flex-col gap-1 min-w-[200px]">
+                    <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1 lg:min-w-[200px]">
                         <label className="text-[10px] font-semibold uppercase text-muted-foreground">Colaborador</label>
                         <Input placeholder="Nombre o identificación" value={form.colaborador}
                             onChange={(e) => setForm({ ...form, colaborador: e.target.value })}
                             className="h-9" />
                     </div>
-                    <div className="flex flex-col gap-1 min-w-[180px]">
+                    <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1 lg:min-w-[180px]">
                         <label className="text-[10px] font-semibold uppercase text-muted-foreground">Cargo</label>
                         <SearchSelect placeholder="Cargo" value={form.cargo} options={opciones.cargos}
                             onChange={(v) => setForm({ ...form, cargo: v })} />
                     </div>
                     {(form.desde || form.hasta || form.colaborador || form.cargo) && (
                         <button onClick={() => setForm({ desde: '', hasta: '', colaborador: '', cargo: '' })}
-                            className="flex h-9 items-center gap-1 self-end rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:text-foreground">
+                            className="flex h-9 items-center gap-1 self-end rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:text-foreground sm:col-span-2 lg:col-span-1">
                             <X className="size-3.5" /> Limpiar
                         </button>
                     )}

@@ -38,16 +38,38 @@ class PruebaAlcoholemiaController extends Controller
 
     public function create(): Response
     {
+        $colaboradores = Colaborador::query()
+            ->completos()
+            ->where('is_active', true)
+            ->orderBy('nombres')
+            ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']);
+
+        // Última firma registrada por colaborador (para precargar en el canvas)
+        $firmasPorColaborador = PruebaAlcoholemia::query()
+            ->whereNotNull('firma_path')
+            ->whereIn('colaborador_id', $colaboradores->pluck('id'))
+            ->orderByDesc('fecha_hora')
+            ->get(['colaborador_id', 'firma_path'])
+            ->unique('colaborador_id')
+            ->mapWithKeys(fn ($p) => [$p->colaborador_id => '/storage/' . $p->firma_path]);
+
+        // Dispositivo más utilizado (el que aparece más veces en pruebas realizadas)
+        $alcoholimetroSugerido = PruebaAlcoholemia::query()
+            ->whereNotNull('alcoholimetro_id')
+            ->where('estado', 'realizada')
+            ->selectRaw('alcoholimetro_id, COUNT(*) as total')
+            ->groupBy('alcoholimetro_id')
+            ->orderByDesc('total')
+            ->value('alcoholimetro_id');
+
         return Inertia::render('seguridad/pruebas/create', [
-            'colaboradores' => Colaborador::query()
-                ->completos()
-                ->where('is_active', true)
-                ->orderBy('nombres')
-                ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
+            'colaboradores'           => $colaboradores,
             'dispositivosDisponibles' => Alcoholimetro::query()
                 ->where('estado', 'Disponible')
                 ->orderBy('codigo')
                 ->get(['id', 'codigo', 'valor_min', 'valor_max']),
+            'firmasPorColaborador'    => $firmasPorColaborador,
+            'alcoholimetroSugerido'  => $alcoholimetroSugerido,
         ]);
     }
 
@@ -117,6 +139,12 @@ class PruebaAlcoholemiaController extends Controller
                 ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
             'dispositivosDisponibles' => $dispositivosDisponibles,
             'prueba' => $pruebaData,
+            'firmasPorColaborador' => PruebaAlcoholemia::query()
+                ->whereNotNull('firma_path')
+                ->orderByDesc('fecha_hora')
+                ->get(['colaborador_id', 'firma_path'])
+                ->unique('colaborador_id')
+                ->mapWithKeys(fn ($p) => [$p->colaborador_id => '/storage/' . $p->firma_path]),
         ]);
     }
 
