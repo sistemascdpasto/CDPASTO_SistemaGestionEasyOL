@@ -53,6 +53,46 @@ class IncentivosController extends Controller
         ]);
     }
 
+    public function variable(): Response
+    {
+        $filtros = [
+            'desde'       => request('desde', ''),
+            'hasta'       => request('hasta', ''),
+            'colaborador' => request('colaborador', ''),
+            'cargo'       => request('cargo', ''),
+        ];
+
+        $incentivos = Incentivo::with('colaborador')
+            ->when($filtros['desde'], fn ($q) => $q->whereDate('created_at', '>=', $filtros['desde']))
+            ->when($filtros['hasta'], fn ($q) => $q->whereDate('created_at', '<=', $filtros['hasta']))
+            ->when($filtros['cargo'], fn ($q) => $q->where('cargo', 'like', '%' . $filtros['cargo'] . '%'))
+            ->when($filtros['colaborador'], function ($q) use ($filtros) {
+                $term = $filtros['colaborador'];
+                $q->where(function ($q2) use ($term) {
+                    $q2->where('cedula', 'like', '%' . $term . '%')
+                        ->orWhere('nombre', 'like', '%' . $term . '%')
+                        ->orWhereHas('colaborador', function ($q3) use ($term) {
+                            $q3->where('nombres', 'like', '%' . $term . '%')
+                                ->orWhere('apellidos', 'like', '%' . $term . '%')
+                                ->orWhere('cedula', 'like', '%' . $term . '%');
+                        });
+                });
+            })
+            ->orderByDesc('created_at')
+            ->paginate(50)
+            ->withQueryString();
+
+        $cargos = Incentivo::whereNotNull('cargo')->distinct()->orderBy('cargo')->pluck('cargo');
+
+        return Inertia::render('gente/incentivos/variable', [
+            'incentivos' => $incentivos,
+            'filters'    => $filtros,
+            'opciones'   => [
+                'cargos' => $cargos,
+            ],
+        ]);
+    }
+
     public function store(ImportarIncentivosRequest $request, IncentivosImportService $service): RedirectResponse
     {
         $rutas = collect($request->file('archivos'))

@@ -309,11 +309,6 @@ export default function IncentivosIndex({
                                         <TableHead className="whitespace-nowrap text-right">Total 3</TableHead>
                                         <TableHead className="whitespace-nowrap text-right">Meta 3</TableHead>
                                         <TableHead className="whitespace-nowrap">Podium</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 1</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 2</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Valor Ind. 3</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Total 4</TableHead>
-                                        <TableHead className="whitespace-nowrap text-right">Meta 4</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -344,11 +339,6 @@ export default function IncentivosIndex({
                                             <TableCell className="text-right">{fmtDecimal(item.total_3)}</TableCell>
                                             <TableCell className="text-right">{fmtDecimal(item.meta_3)}</TableCell>
                                             <TableCell className="whitespace-nowrap">{item.podium ?? '—'}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_1)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_2)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.valor_indicador_3)}</TableCell>
-                                            <TableCell className="text-right font-semibold text-blue-600">{fmtDecimal(item.total_4)}</TableCell>
-                                            <TableCell className="text-right">{fmtDecimal(item.meta_4)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

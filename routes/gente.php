@@ -130,6 +130,9 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Flota|Gente']
 
         Route::get('incentivos', [IncentivosController::class, 'index'])
             ->name('incentivos.index');
+
+        Route::get('incentivos/variable', [IncentivosController::class, 'variable'])
+            ->name('incentivos.variable');
     });
 
 Route::middleware(['auth', 'active', 'role:Administrador|Gente'])

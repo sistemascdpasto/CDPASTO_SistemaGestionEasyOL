@@ -6,6 +6,7 @@ import {
     BellRing,
     BookOpen,
     CalendarDays,
+    DollarSign,
     Gift,
     Car,
     ClipboardCheck,
@@ -159,7 +160,14 @@ export const modules: ModuleDef[] = [
             { title: 'DPO Academy', slug: 'dpo-academy', icon: BookOpen },
             { title: 'Ausentismo', slug: 'ausentismo', icon: CalendarDays },
             { title: 'Asistencia GeoVictoria', slug: 'asistencia-geovictoria', icon: Clock },
-            { title: 'Incentivos', slug: 'incentivos', icon: Gift },
+            {
+                title: 'Indicadores',
+                icon: Gift,
+                submodules: [
+                    { title: 'Indicadores', slug: 'incentivos', icon: Gift },
+                    { title: 'Variable', slug: 'incentivos/variable', icon: DollarSign },
+                ],
+            },
         ],
     },
     {
