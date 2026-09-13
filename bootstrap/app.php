@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureGeovictoriaApiToken;
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\EnsureSimitApiToken;
+use App\Http\Middleware\ForceHttps;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
+
+        // Antes que cualquier otra cosa (redirige antes de tocar sesión/CSRF).
+        $middleware->prepend(ForceHttps::class);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
