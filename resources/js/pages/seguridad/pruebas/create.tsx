@@ -632,7 +632,15 @@ export default function CreatePrueba({
 
                             <SeccionCard icon={PenTool} titulo="Firma del colaborador" tono="azul">
                                 <div className="max-w-md">
-                                    <FirmaPad ref={firmaPadRef} />
+                                    <FirmaPad
+                                        key={data.colaborador_id || 'sin-colaborador'}
+                                        ref={firmaPadRef}
+                                        firmaExistente={
+                                            data.colaborador_id
+                                                ? (firmasPorColaborador[Number(data.colaborador_id)] ?? null)
+                                                : null
+                                        }
+                                    />
                                 </div>
                             </SeccionCard>
 
