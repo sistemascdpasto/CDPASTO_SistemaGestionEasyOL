@@ -27,13 +27,18 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
-        // Antes que cualquier otra cosa (redirige antes de tocar sesión/CSRF).
-        $middleware->prepend(ForceHttps::class);
-
-        $middleware->web(append: [
+        // ForceHttps va al PRINCIPIO del grupo web/api, no del stack global:
+        // el stack global corre TrustProxies primero (interpreta el
+        // X-Forwarded-Proto que manda Railway), y solo después de eso
+        // $request->secure() refleja la conexión real del navegador. Si
+        // ForceHttps corriera antes de TrustProxies (vía prepend() global),
+        // siempre vería la conexión interna como HTTP y redirigiría en
+        // bucle infinito.
+        $middleware->web(prepend: [ForceHttps::class], append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+        $middleware->api(prepend: [ForceHttps::class]);
 
         $middleware->alias([
             'active' => EnsureAccountIsActive::class,
