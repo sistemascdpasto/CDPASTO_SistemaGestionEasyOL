@@ -150,22 +150,20 @@ function RegistroCard({ item }: { item: IncentivoRow }) {
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function MiVariable({
-    colaborador, incentivos, desde, hasta,
+    colaborador, incentivos, meses, mes,
 }: {
     colaborador: ColaboradorInfo;
     incentivos: IncentivoRow[];
-    desde: string;
-    hasta: string;
+    meses: string[];
+    mes: string;
 }) {
-    const [form, setForm] = useState({ desde, hasta });
+    const [mesActual, setMes] = useState(mes);
     const isFirst = useRef(true);
 
     useEffect(() => {
         if (isFirst.current) { isFirst.current = false; return; }
-        router.get(route('portal.mi-variable'), form, { preserveState: true, replace: true });
-    }, [form.desde, form.hasta]);
-
-    const limpiar = () => setForm({ desde: '', hasta: '' });
+        router.get(route('portal.mi-variable'), { mes: mesActual }, { preserveState: true, replace: true });
+    }, [mesActual]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -174,45 +172,47 @@ export default function MiVariable({
 
                 {/* Título */}
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Mi Variable</h1>
+                    <h1 className="text-xl font-bold text-foreground sm:text-3xl">Mi Variable</h1>
                     <p className="mt-0.5 text-sm text-muted-foreground">Valores de tu compensación variable por indicador</p>
                 </div>
 
                 {/* Card colaborador + filtro */}
                 <div className="rounded-2xl border border-sidebar-border/70 bg-card shadow-sm">
-                    <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
 
                         {/* Avatar */}
-                        <div className="flex items-center gap-4">
-                            <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-700">
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-700 sm:size-14">
                                 {colaborador.imagen ? (
                                     <img src={`/storage/${colaborador.imagen}`} alt={colaborador.nombre_completo}
                                         className="size-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                ) : <User className="size-7 text-white" />}
+                                ) : <User className="size-6 text-white sm:size-7" />}
                             </div>
-                            <div>
-                                <p className="font-bold text-foreground">{colaborador.nombre_completo}</p>
-                                <p className="text-xs text-blue-600 dark:text-blue-400">{colaborador.cargo}{colaborador.area ? ` · ${colaborador.area}` : ''}</p>
+                            <div className="min-w-0">
+                                <p className="truncate font-bold text-foreground">{colaborador.nombre_completo}</p>
+                                <p className="truncate text-xs text-blue-600 dark:text-blue-400">{colaborador.cargo}{colaborador.area ? ` · ${colaborador.area}` : ''}</p>
                             </div>
                         </div>
 
-                        {/* Filtro desde/hasta */}
-                        <div className="flex flex-wrap items-end gap-2">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-semibold uppercase text-muted-foreground">Desde</label>
-                                <input type="date" value={form.desde}
-                                    onChange={(e) => setForm({ ...form, desde: e.target.value })}
-                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        {/* Selector de mes */}
+                        <div className="flex items-end gap-2">
+                            <div className="flex flex-1 flex-col gap-1 sm:flex-none">
+                                <label className="text-[10px] font-semibold uppercase text-muted-foreground">Mes</label>
+                                <select
+                                    value={mesActual}
+                                    onChange={(e) => setMes(e.target.value)}
+                                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 sm:w-auto"
+                                >
+                                    <option value="">Todos los meses</option>
+                                    {meses.map((m) => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <label className="text-[10px] font-semibold uppercase text-muted-foreground">Hasta</label>
-                                <input type="date" value={form.hasta}
-                                    onChange={(e) => setForm({ ...form, hasta: e.target.value })}
-                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                            </div>
-                            {(form.desde || form.hasta) && (
-                                <button onClick={limpiar} className="flex h-9 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:text-foreground">
-                                    <X className="size-3.5" /> Limpiar
+                            {mesActual && (
+                                <button onClick={() => setMes('')} className="flex h-9 shrink-0 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:text-foreground">
+                                    <X className="size-3.5" />
+                                    <span className="hidden sm:inline">Limpiar</span>
                                 </button>
                             )}
                         </div>
@@ -224,7 +224,7 @@ export default function MiVariable({
                     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 py-16 text-center dark:border-slate-700">
                         <TrendingUp className="size-12 text-slate-300 dark:text-slate-600" />
                         <p className="mt-4 text-base font-medium text-muted-foreground">
-                            {!form.desde && !form.hasta ? 'Aún no tienes registros de variable.' : 'Sin registros en el rango seleccionado.'}
+                            {!mesActual ? 'Aún no tienes registros de variable.' : 'Sin registros para el mes seleccionado.'}
                         </p>
                         <p className="mt-1 text-sm text-muted-foreground/60">Los datos los carga el equipo de Gente.</p>
                     </div>

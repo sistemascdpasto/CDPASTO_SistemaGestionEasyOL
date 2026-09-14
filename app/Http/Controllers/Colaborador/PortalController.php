@@ -253,12 +253,16 @@ class PortalController extends Controller
     {
         $colaborador = $this->colaboradorDeOFallar($request);
 
-        $desde = $request->get('desde');
-        $hasta = $request->get('hasta');
+        $mes = $request->get('mes');
+
+        $meses = Incentivo::where('colaborador_id', $colaborador->id)
+            ->whereNotNull('mes')
+            ->distinct()
+            ->orderBy('mes')
+            ->pluck('mes');
 
         $incentivos = Incentivo::where('colaborador_id', $colaborador->id)
-            ->when($desde, fn ($q) => $q->whereDate('created_at', '>=', $desde))
-            ->when($hasta, fn ($q) => $q->whereDate('created_at', '<=', $hasta))
+            ->when($mes, fn ($q) => $q->where('mes', $mes))
             ->orderByDesc('created_at')
             ->get();
 
@@ -272,8 +276,8 @@ class PortalController extends Controller
                 'imagen'          => $colaborador->imagen ?? null,
             ],
             'incentivos' => $incentivos,
-            'desde'      => $desde ?? '',
-            'hasta'      => $hasta ?? '',
+            'meses'      => $meses,
+            'mes'        => $mes ?? '',
         ]);
     }
 
@@ -281,12 +285,16 @@ class PortalController extends Controller
     {
         $colaborador = $this->colaboradorDeOFallar($request);
 
-        $desde = $request->get('desde');
-        $hasta = $request->get('hasta');
+        $mes = $request->get('mes');
+
+        $meses = Incentivo::where('colaborador_id', $colaborador->id)
+            ->whereNotNull('mes')
+            ->distinct()
+            ->orderBy('mes')
+            ->pluck('mes');
 
         $incentivos = Incentivo::where('colaborador_id', $colaborador->id)
-            ->when($desde, fn ($q) => $q->whereDate('created_at', '>=', $desde))
-            ->when($hasta, fn ($q) => $q->whereDate('created_at', '<=', $hasta))
+            ->when($mes, fn ($q) => $q->where('mes', $mes))
             ->orderByDesc('created_at')
             ->get();
 
@@ -300,8 +308,8 @@ class PortalController extends Controller
                 'imagen'          => $colaborador->imagen ?? null,
             ],
             'incentivos' => $incentivos,
-            'desde'      => $desde ?? '',
-            'hasta'      => $hasta ?? '',
+            'meses'      => $meses,
+            'mes'        => $mes ?? '',
         ]);
     }
 
