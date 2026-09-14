@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
+        // NOTA (2026-09-14): hubo un ForceHttps aquí (mismo bug que en
+        // ADENAR) que causó ERR_TOO_MANY_REDIRECTS en producción. Se quita
+        // por completo hasta diagnosticar con datos reales de producción en
+        // vez de asumir cómo reenvía Railway las cabeceras. Railway ya sirve
+        // el dominio *.up.railway.app solo por HTTPS de cara al usuario.
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
