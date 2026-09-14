@@ -15,15 +15,13 @@ class IncentivosController extends Controller
     public function index(): Response
     {
         $filtros = [
-            'desde'        => request('desde', ''),
-            'hasta'        => request('hasta', ''),
+            'mes'          => request('mes', ''),
             'colaborador'  => request('colaborador', ''),
             'cargo'        => request('cargo', ''),
         ];
 
         $incentivos = Incentivo::with('colaborador')
-            ->when($filtros['desde'], fn ($q) => $q->whereDate('created_at', '>=', $filtros['desde']))
-            ->when($filtros['hasta'], fn ($q) => $q->whereDate('created_at', '<=', $filtros['hasta']))
+            ->when($filtros['mes'], fn ($q) => $q->where('mes', $filtros['mes']))
             ->when($filtros['cargo'], fn ($q) => $q->where('cargo', 'like', '%' . $filtros['cargo'] . '%'))
             ->when($filtros['colaborador'], function ($q) use ($filtros) {
                 $term = $filtros['colaborador'];
@@ -42,12 +40,14 @@ class IncentivosController extends Controller
             ->paginate(50)
             ->withQueryString();
 
+        $meses  = Incentivo::whereNotNull('mes')->distinct()->orderBy('mes')->pluck('mes');
         $cargos = Incentivo::whereNotNull('cargo')->distinct()->orderBy('cargo')->pluck('cargo');
 
         return Inertia::render('gente/incentivos/index', [
             'incentivos' => $incentivos,
             'filters'    => $filtros,
             'opciones'   => [
+                'meses'  => $meses,
                 'cargos' => $cargos,
             ],
         ]);
@@ -56,15 +56,13 @@ class IncentivosController extends Controller
     public function variable(): Response
     {
         $filtros = [
-            'desde'       => request('desde', ''),
-            'hasta'       => request('hasta', ''),
+            'mes'         => request('mes', ''),
             'colaborador' => request('colaborador', ''),
             'cargo'       => request('cargo', ''),
         ];
 
         $incentivos = Incentivo::with('colaborador')
-            ->when($filtros['desde'], fn ($q) => $q->whereDate('created_at', '>=', $filtros['desde']))
-            ->when($filtros['hasta'], fn ($q) => $q->whereDate('created_at', '<=', $filtros['hasta']))
+            ->when($filtros['mes'], fn ($q) => $q->where('mes', $filtros['mes']))
             ->when($filtros['cargo'], fn ($q) => $q->where('cargo', 'like', '%' . $filtros['cargo'] . '%'))
             ->when($filtros['colaborador'], function ($q) use ($filtros) {
                 $term = $filtros['colaborador'];
@@ -83,12 +81,14 @@ class IncentivosController extends Controller
             ->paginate(50)
             ->withQueryString();
 
+        $meses  = Incentivo::whereNotNull('mes')->distinct()->orderBy('mes')->pluck('mes');
         $cargos = Incentivo::whereNotNull('cargo')->distinct()->orderBy('cargo')->pluck('cargo');
 
         return Inertia::render('gente/incentivos/variable', [
             'incentivos' => $incentivos,
             'filters'    => $filtros,
             'opciones'   => [
+                'meses'  => $meses,
                 'cargos' => $cargos,
             ],
         ]);
