@@ -1,7 +1,8 @@
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { DispositivoFormData, DispositivoFormFields, type SavedDocumento } from '@/pages/seguridad/dispositivos/dispositivo-form-fields';
+import { DispositivoFormData, MantenimientoGuardado } from '@/pages/seguridad/dispositivos/dispositivo-form-fields';
+import { DispositivoFormFields } from '@/pages/seguridad/dispositivos/dispositivo-form-fields';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
@@ -18,11 +19,16 @@ interface EditableDispositivo {
     valor_max: string;
     estado: string;
     imagenes_paths?: string[];
-    documentos_paths?: SavedDocumento[];
-    documento_path: string | null;
+    documentos_paths?: { id: number; url: string; nombre_original: string }[];
 }
 
-export default function EditDispositivo({ dispositivo }: { dispositivo: EditableDispositivo }) {
+export default function EditDispositivo({
+    dispositivo,
+    mantenimientos = [],
+}: {
+    dispositivo: EditableDispositivo;
+    mantenimientos?: MantenimientoGuardado[];
+}) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Seguridad', href: '/modules/seguridad' },
@@ -36,7 +42,6 @@ export default function EditDispositivo({ dispositivo }: { dispositivo: Editable
         modelo: dispositivo.modelo ?? '',
         fecha_calibracion: dispositivo.fecha_calibracion ?? '',
         fecha_vencimiento_certificado: dispositivo.fecha_vencimiento_certificado ?? '',
-        documento: null,
         valor_min: dispositivo.valor_min,
         valor_max: dispositivo.valor_max,
         estado: dispositivo.estado,
@@ -44,13 +49,18 @@ export default function EditDispositivo({ dispositivo }: { dispositivo: Editable
         deleted_imagenes_indices: [],
         documentos: [],
         deleted_documentos_indices: [],
+        mantenimientos: [],
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        // Laravel no soporta multipart en PUT, así que se envía por POST con _method spoof.
-        transform((data) => ({ ...data, _method: 'put' }));
-        post(route('seguridad.dispositivos.update', dispositivo.id));
+        transform((data) => ({
+            ...data,
+            _method: 'PUT',
+        }));
+        post(route('seguridad.dispositivos.update', dispositivo.id), {
+            forceFormData: true,
+        });
     };
 
     return (
@@ -67,7 +77,7 @@ export default function EditDispositivo({ dispositivo }: { dispositivo: Editable
                         processing={processing}
                         savedImagenes={dispositivo.imagenes_paths ?? []}
                         savedDocumentos={dispositivo.documentos_paths ?? []}
-                        documentoLegado={dispositivo.documento_path ? `/storage/${dispositivo.documento_path}` : null}
+                        savedMantenimientos={mantenimientos}
                     />
 
                     <div className="flex justify-end">

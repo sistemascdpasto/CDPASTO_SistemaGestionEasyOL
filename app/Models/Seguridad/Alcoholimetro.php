@@ -19,7 +19,6 @@ class Alcoholimetro extends Model
         'modelo',
         'fecha_calibracion',
         'fecha_vencimiento_certificado',
-        'documento_path',
         'valor_min',
         'valor_max',
         'estado',

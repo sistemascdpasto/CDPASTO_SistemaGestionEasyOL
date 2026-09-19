@@ -11,9 +11,11 @@ use App\Models\Seguridad\PruebaAlcoholemia;
 use App\Services\Seguridad\QrCodeGenerator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,38 +40,33 @@ class PruebaAlcoholemiaController extends Controller
 
     public function create(): Response
     {
-        $colaboradores = Colaborador::query()
-            ->completos()
-            ->where('is_active', true)
-            ->orderBy('nombres')
-            ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']);
+        $dispositivosDisponibles = Alcoholimetro::query()
+            ->where('estado', 'Disponible')
+            ->orderBy('codigo')
+            ->get(['id', 'codigo', 'valor_min', 'valor_max']);
 
-        // Última firma registrada por colaborador (para precargar en el canvas)
-        $firmasPorColaborador = PruebaAlcoholemia::query()
-            ->whereNotNull('firma_path')
-            ->whereIn('colaborador_id', $colaboradores->pluck('id'))
-            ->orderByDesc('fecha_hora')
-            ->get(['colaborador_id', 'firma_path'])
-            ->unique('colaborador_id')
-            ->mapWithKeys(fn ($p) => [$p->colaborador_id => '/storage/' . $p->firma_path]);
-
-        // Dispositivo más utilizado (el que aparece más veces en pruebas realizadas)
-        $alcoholimetroSugerido = PruebaAlcoholemia::query()
+        // Precarga el dispositivo más frecuentemente usado en pruebas realizadas
+        $dispositivoDefaultId = PruebaAlcoholemia::query()
             ->whereNotNull('alcoholimetro_id')
             ->where('estado', 'realizada')
-            ->selectRaw('alcoholimetro_id, COUNT(*) as total')
+            ->select('alcoholimetro_id', DB::raw('COUNT(*) as total'))
             ->groupBy('alcoholimetro_id')
             ->orderByDesc('total')
             ->value('alcoholimetro_id');
 
+        // Si el más usado no está disponible actualmente, elegir el primero disponible
+        if ($dispositivoDefaultId && !$dispositivosDisponibles->contains('id', $dispositivoDefaultId)) {
+            $dispositivoDefaultId = $dispositivosDisponibles->first()?->id;
+        }
+
         return Inertia::render('seguridad/pruebas/create', [
-            'colaboradores'           => $colaboradores,
-            'dispositivosDisponibles' => Alcoholimetro::query()
-                ->where('estado', 'Disponible')
-                ->orderBy('codigo')
-                ->get(['id', 'codigo', 'valor_min', 'valor_max']),
-            'firmasPorColaborador'    => $firmasPorColaborador,
-            'alcoholimetroSugerido'  => $alcoholimetroSugerido,
+            'colaboradores' => Colaborador::query()
+                ->completos()
+                ->where('is_active', true)
+                ->orderBy('nombres')
+                ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
+            'dispositivosDisponibles' => $dispositivosDisponibles,
+            'dispositivoDefaultId'    => $dispositivoDefaultId,
         ]);
     }
 
@@ -89,7 +86,7 @@ class PruebaAlcoholemiaController extends Controller
             'firma_path' => $request->file('firma')?->store('firmas', 'public'),
             'observaciones' => $request->input('observaciones'),
             'responsable_id' => $request->user()->id,
-            'fecha_hora' => $esProgramacion ? $request->date('programada_en') : Carbon::now(),
+            'fecha_hora' => $esProgramacion ? $request->date('programada_en') : ($request->filled('fecha_hora') ? Carbon::parse($request->input('fecha_hora')) : Carbon::now()),
             'programada_en' => $esProgramacion ? $request->date('programada_en') : null,
             'estado' => $esProgramacion ? 'programada' : 'realizada',
         ]);
@@ -125,6 +122,11 @@ class PruebaAlcoholemiaController extends Controller
 
         $pruebaData = $prueba->load(['colaborador', 'alcoholimetro', 'responsable'])->toArray();
 
+        // Formatear fecha_hora para input datetime-local
+        if ($prueba->fecha_hora) {
+            $pruebaData['fecha_hora'] = $prueba->fecha_hora->format('Y-m-d\TH:i');
+        }
+
         // Agregar rutas de evidencias con /storage/
         if ($prueba->evidencia_path) {
             $pruebaData['evidencia_path'] = '/storage/'.$prueba->evidencia_path;
@@ -139,12 +141,6 @@ class PruebaAlcoholemiaController extends Controller
                 ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
             'dispositivosDisponibles' => $dispositivosDisponibles,
             'prueba' => $pruebaData,
-            'firmasPorColaborador' => PruebaAlcoholemia::query()
-                ->whereNotNull('firma_path')
-                ->orderByDesc('fecha_hora')
-                ->get(['colaborador_id', 'firma_path'])
-                ->unique('colaborador_id')
-                ->mapWithKeys(fn ($p) => [$p->colaborador_id => '/storage/' . $p->firma_path]),
         ]);
     }
 
@@ -161,7 +157,7 @@ class PruebaAlcoholemiaController extends Controller
             'consentimiento_aceptado' => ! $esProgramacion && $request->boolean('consentimiento_aceptado'),
             'consentimiento_en' => $esProgramacion ? null : ($prueba->consentimiento_en ?? Carbon::now()),
             'observaciones' => $request->input('observaciones'),
-            'fecha_hora' => $esProgramacion ? $request->date('programada_en') : ($prueba->fecha_hora ?? Carbon::now()),
+            'fecha_hora' => $esProgramacion ? $request->date('programada_en') : ($request->filled('fecha_hora') ? Carbon::parse($request->input('fecha_hora')) : ($prueba->fecha_hora ?? Carbon::now())),
             'programada_en' => $esProgramacion ? $request->date('programada_en') : null,
             'estado' => $esProgramacion ? 'programada' : 'realizada',
         ]);
@@ -221,6 +217,7 @@ class PruebaAlcoholemiaController extends Controller
                 'evaluacion' => $prueba->evaluacion(),
             ],
             'qrSvg' => $qrSvg,
+            'ubicacion' => config('app.ubicacion_pruebas', 'Pasto, Nariño · Colombia'),
         ]);
     }
 
@@ -252,6 +249,9 @@ class PruebaAlcoholemiaController extends Controller
 
     public function exportarPdf(Request $request)
     {
+        ini_set('memory_limit', '512M');
+        set_time_limit(180);
+
         $pruebas = $this->filtrarPruebas($request)->latest('fecha_hora')->get();
 
         return Pdf::loadView('seguridad.pruebas-pdf', ['pruebas' => $pruebas])
@@ -261,9 +261,29 @@ class PruebaAlcoholemiaController extends Controller
 
     public function exportarExcel(Request $request)
     {
+        ini_set('memory_limit', '512M');
+        set_time_limit(180);
+
         $pruebas = $this->filtrarPruebas($request)->latest('fecha_hora')->get();
 
         return Excel::download(new PruebasExport($pruebas), 'pruebas-alcoholemia-'.now()->format('Y-m-d').'.xlsx');
+    }
+
+    /**
+     * Devuelve la URL de la última firma registrada para un colaborador.
+     * GET /modules/seguridad/pruebas/ultima-firma/{colaborador}
+     */
+    public function ultimaFirma(Colaborador $colaborador): JsonResponse
+    {
+        $ultima = PruebaAlcoholemia::query()
+            ->where('colaborador_id', $colaborador->id)
+            ->whereNotNull('firma_path')
+            ->latest('fecha_hora')
+            ->first(['firma_path']);
+
+        return response()->json([
+            'firma_url' => $ultima ? '/storage/' . $ultima->firma_path : null,
+        ]);
     }
 
     /**

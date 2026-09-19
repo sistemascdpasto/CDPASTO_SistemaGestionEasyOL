@@ -54,13 +54,17 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad'])
         Route::get('pruebas/calendario', [PruebaAlcoholemiaController::class, 'calendario'])->name('pruebas.calendario');
         Route::get('pruebas/exportar/pdf', [PruebaAlcoholemiaController::class, 'exportarPdf'])->name('pruebas.exportar-pdf');
         Route::get('pruebas/exportar/excel', [PruebaAlcoholemiaController::class, 'exportarExcel'])->name('pruebas.exportar-excel');
+        Route::get('pruebas/ultima-firma/{colaborador}', [PruebaAlcoholemiaController::class, 'ultimaFirma'])->name('pruebas.ultima-firma');
         Route::resource('pruebas', PruebaAlcoholemiaController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
 
         Route::get('condiciones-salud', [CondicionSaludController::class, 'index'])->name('condiciones-salud.index');
         Route::get('condiciones-salud/exportar/pdf', [CondicionSaludController::class, 'exportarPdf'])->name('condiciones-salud.exportar-pdf');
         Route::get('condiciones-salud/exportar/excel', [CondicionSaludController::class, 'exportarExcel'])->name('condiciones-salud.exportar-excel');
+        Route::get('condiciones-salud/{colaboradorId}/{fecha}/editar', [CondicionSaludController::class, 'editarFila'])->name('condiciones-salud.editar-fila');
         Route::post('condiciones-salud', [CondicionSaludController::class, 'store'])->name('condiciones-salud.store');
         Route::post('condiciones-salud/{condicion}/firmar', [CondicionSaludController::class, 'firmar'])->name('condiciones-salud.firmar');
+        Route::patch('condiciones-salud/{condicion}', [CondicionSaludController::class, 'update'])->name('condiciones-salud.update');
+        Route::delete('condiciones-salud/{condicion}', [CondicionSaludController::class, 'destroy'])->name('condiciones-salud.destroy');
 
         Route::get('alertas', [AlertaController::class, 'index'])->name('alertas.index');
         Route::get('alertas/bell', [AlertaController::class, 'bell'])->name('alertas.bell');

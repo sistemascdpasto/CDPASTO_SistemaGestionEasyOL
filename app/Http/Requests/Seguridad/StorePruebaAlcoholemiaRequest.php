@@ -70,6 +70,7 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
             'evidencias.*' => ['mimes:pdf', 'max:5120'],
             'firma' => ['nullable', 'image', 'max:2048'],
             'observaciones' => ['nullable', 'string', 'max:2000'],
+            'fecha_hora' => ['nullable', 'date'],
         ];
     }
 
@@ -93,7 +94,9 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
             }
 
             $prueba = $this->route('prueba');
-            $fechaHora = $prueba?->fecha_hora ?? Carbon::now();
+            $fechaHora = $this->filled('fecha_hora')
+                ? Carbon::parse($this->input('fecha_hora'))
+                : ($prueba?->fecha_hora ?? Carbon::now());
             $horas = (int) config('seguridad.intervalo_minimo_horas');
             $ignorarId = $this->route('prueba')?->id;
 

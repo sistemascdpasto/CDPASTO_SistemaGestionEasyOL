@@ -21,7 +21,6 @@ export default function CreateDispositivo() {
         modelo: '',
         fecha_calibracion: '',
         fecha_vencimiento_certificado: '',
-        documento: null,
         valor_min: '0',
         valor_max: '0.1',
         estado: 'Disponible',
@@ -29,11 +28,14 @@ export default function CreateDispositivo() {
         deleted_imagenes_indices: [],
         documentos: [],
         deleted_documentos_indices: [],
+        mantenimientos: [],
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('seguridad.dispositivos.store'));
+        post(route('seguridad.dispositivos.store'), {
+            forceFormData: true,
+        });
     };
 
     return (
