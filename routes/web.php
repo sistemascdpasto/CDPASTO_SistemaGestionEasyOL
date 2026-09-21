@@ -18,7 +18,9 @@ require __DIR__.'/seguridad.php';
 require __DIR__.'/colaborador.php';
 require __DIR__.'/flota.php';
 require __DIR__.'/capacitaciones.php';
+require __DIR__.'/reparto.php';
 require __DIR__.'/gente.php';
+require __DIR__.'/cinco-porques.php';
 
 // Slugs de módulo válidos para las rutas genéricas modules/{module} de abajo.
 $modulosGenericosDisponibles = ['seguridad', 'gente', 'flota'];
