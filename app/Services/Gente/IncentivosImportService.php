@@ -5,8 +5,8 @@ namespace App\Services\Gente;
 use App\Models\Seguridad\Colaborador;
 use App\Models\Seguridad\Incentivo;
 use App\Services\Seguridad\Concerns\NormalizaCatalogos;
+use App\Support\HojaCalculo;
 use Illuminate\Support\Facades\Log;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
 /**
@@ -67,7 +67,7 @@ class IncentivosImportService
 
         foreach ($rutasArchivos as $rutaArchivo) {
             try {
-                $spreadsheet = IOFactory::load($rutaArchivo);
+                $spreadsheet = HojaCalculo::cargar($rutaArchivo);
                 $hoja        = $spreadsheet->getActiveSheet();
             } catch (Throwable $e) {
                 Log::warning("Importación de Incentivos: no se pudo cargar el archivo {$rutaArchivo}: {$e->getMessage()}");
@@ -77,7 +77,7 @@ class IncentivosImportService
 
             $resultado['archivos_procesados']++;
 
-            $filas = $hoja->toArray(null, true, true, true);
+            $filas = HojaCalculo::filas($hoja, true, true);
 
             // Buscar la fila que contiene los encabezados reales (la que tenga 'Cedula' o 'Mes')
             // porque el Excel puede tener filas de título antes de los encabezados.
