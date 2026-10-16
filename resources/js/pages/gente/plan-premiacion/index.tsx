@@ -600,10 +600,8 @@ export default function PlanPremiacionIndex({ colaboradores, resumen, top3, peor
                     </Card>
                 )}
 
-                {/* Gráfico de Barras del Mes — mitad del ancho */}
-                <div className="w-1/2">
-                    <GraficoBarrasMes colaboradores={colaboradores} mes={mes} anio={anio} />
-                </div>
+                {/* Gráfico de Barras del Mes */}
+                <GraficoBarrasMes colaboradores={colaboradores} mes={mes} anio={anio} />
 
                 {/* Tabla Principal */}
                 <Card>

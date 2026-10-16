@@ -78,6 +78,39 @@ class VehiculoTest extends TestCase
         $this->assertSoftDeleted($vehiculo);
     }
 
+    public function test_editar_un_vehiculo_sin_subir_foto_nueva_no_borra_la_foto_existente(): void
+    {
+        Storage::fake('public');
+        $user = $this->actingAsFlota();
+
+        $this->actingAs($user)->post(route('flota.vehiculos.store'), [
+            'placa' => 'IMG123',
+            'is_active' => true,
+            'imagen' => UploadedFile::fake()->image('camion.jpg'),
+        ])->assertRedirect(route('flota.vehiculos.index'));
+
+        $vehiculo = Vehiculo::where('placa', 'IMG123')->firstOrFail();
+        $rutaImagenOriginal = $vehiculo->imagen;
+        $this->assertNotNull($rutaImagenOriginal);
+        Storage::disk('public')->assertExists($rutaImagenOriginal);
+
+        // El formulario de edición siempre manda el campo "imagen" (aunque
+        // esté vacío, porque el <input type=file> no se puede prellenar) —
+        // esto simula exactamente esa forma real de la petición, no solo
+        // "no mandar el campo".
+        $this->actingAs($user)->put(route('flota.vehiculos.update', $vehiculo), [
+            'placa' => 'IMG123',
+            'is_active' => true,
+            'capacidad_pallets' => 20,
+            'imagen' => null,
+        ])->assertRedirect(route('flota.vehiculos.index'));
+
+        $vehiculo->refresh();
+        $this->assertSame($rutaImagenOriginal, $vehiculo->imagen, 'La foto no debe borrarse al editar otro campo sin tocar la imagen.');
+        $this->assertSame(20, $vehiculo->capacidad_pallets);
+        Storage::disk('public')->assertExists($rutaImagenOriginal);
+    }
+
     public function test_it_stores_and_updates_the_document_expiry_dates(): void
     {
         Storage::fake('public');

@@ -43,7 +43,7 @@ const PILARES = [
     { key: 'resultado_flota',      label: 'Flota',     max: 15, color: '#3b82f6' },
 ] as const;
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function CustomTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
@@ -205,7 +205,7 @@ export default function GraficoBarrasMes({ colaboradores, mes, anio }: Props) {
                             tick={{ fontSize: 10, fill: '#64748b' }}
                             angle={-35}
                             textAnchor="end"
-                            interval={0}
+                            interval="preserveStartEnd"
                             height={52}
                         />
                         <YAxis
