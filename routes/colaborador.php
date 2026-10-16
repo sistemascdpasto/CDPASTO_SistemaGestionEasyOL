@@ -3,6 +3,7 @@
 use App\Http\Controllers\Colaborador\CapacitacionController;
 use App\Http\Controllers\Colaborador\CondicionSaludController;
 use App\Http\Controllers\Colaborador\EncuestaMorbilidadController;
+use App\Http\Controllers\Colaborador\IncidenciaGeovictoriaController;
 use App\Http\Controllers\Colaborador\PortalController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,4 +40,7 @@ Route::middleware(['auth', 'active', 'role:Colaborador|Administrador|Seguridad']
             ->name('capacitaciones.materiales.marcar-revisada');
         Route::get('capacitaciones/materiales/{material}/descargar', [CapacitacionController::class, 'descargar'])
             ->name('capacitaciones.materiales.descargar');
+
+        Route::get('mis-incidencias-geovictoria', [IncidenciaGeovictoriaController::class, 'index'])
+            ->name('mis-incidencias-geovictoria.index');
     });
