@@ -533,7 +533,7 @@ export default function PlanPremiacionShow({ colaborador, metricas, historial_ac
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-foreground">Historial ACI — últimos 6 meses</p>
-                                <p className="text-[10px] text-muted-foreground">Meta: 32 ACI = 100%</p>
+                                <p className="text-[10px] text-muted-foreground">Meta: 4 ACI = 100%</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">

@@ -7,6 +7,7 @@ use App\Models\Gente\ChecklistPlanPremiacion;
 use App\Models\Seguridad\Aci;
 use App\Models\Seguridad\Colaborador;
 use App\Models\Seguridad\Incentivo;
+use App\Services\Colaborador\ColaboradorResumenService;
 use App\Services\Seguridad\EvaluacionCalculator;
 use App\Services\Seguridad\IndiceRiesgoCalculator;
 use Carbon\Carbon;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class PortalController extends Controller
 {
-    public function index(Request $request, EvaluacionCalculator $evaluacion, IndiceRiesgoCalculator $riesgo): Response
+    public function index(Request $request, EvaluacionCalculator $evaluacion, IndiceRiesgoCalculator $riesgo, ColaboradorResumenService $resumenService): Response
     {
         $colaborador = $this->colaboradorDe($request);
 
@@ -47,6 +48,7 @@ class PortalController extends Controller
                 ->limit(5)
                 ->get(),
             'alertasPendientes' => $colaborador->alertas()->where('atendida', false)->count(),
+            'resumen' => $resumenService->resumen($colaborador, $request->user()->id),
         ]);
     }
 
@@ -95,7 +97,7 @@ class PortalController extends Controller
         };
 
         // ── ACIs del mes ─────────────────────────────────────────────────────
-        $metaBase = 32;
+        $metaBase = 4;
         $aciRealizadas = Aci::whereMonth('fecha_incidente', $mes)
             ->whereYear('fecha_incidente', $anio)
             ->where('colaborador_id', $colaborador->id)
@@ -206,7 +208,7 @@ class PortalController extends Controller
 
         // ── Armar métricas ────────────────────────────────────────────────
         $metricas = [
-            'aci' => ['valor' => $porcentajeAci,       'label' => "{$porcentajeAci}%",     'pilar' => 'Seguridad', 'peso' => 10,  'emoji' => '🛡️', 'titulo' => 'ACI',                'meta_desc' => '(Realizadas ÷ 32) × 100'],
+            'aci' => ['valor' => $porcentajeAci,       'label' => "{$porcentajeAci}%",     'pilar' => 'Seguridad', 'peso' => 10,  'emoji' => '🛡️', 'titulo' => 'ACI',                'meta_desc' => '(Realizadas ÷ 4) × 100'],
             'owd' => ['valor' => $owdRuta,              'label' => $owdRuta !== null ? "{$owdRuta}%" : 'N/A',        'pilar' => 'Seguridad', 'peso' => 15,  'emoji' => '✅', 'titulo' => 'OWD Ruta',           'meta_desc' => 'Sin NO OK = 100% | Con NO OK = 0%'],
             'calificaciones' => ['valor' => $promedioCalif,        'label' => $promedioCalif !== null ? "{$promedioCalif}%" : 'N/A', 'pilar' => 'Seguridad', 'peso' => 10, 'emoji' => '🎓', 'titulo' => 'Calificaciones',     'meta_desc' => 'Promedio de notas por módulo'],
             'dpo' => ['valor' => $estaEnDpo ? 0.0 : 100.0, 'label' => $estaEnDpo ? '0%' : '100%',                        'pilar' => 'Gente',     'peso' => 5,   'emoji' => '📚', 'titulo' => 'DPO Academy',        'meta_desc' => 'Sin registro = 100% | En listado = 0%'],

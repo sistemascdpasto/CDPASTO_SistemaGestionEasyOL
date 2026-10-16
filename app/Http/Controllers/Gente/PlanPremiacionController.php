@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlanPremiacionController extends Controller
 {
-    public const META_BASE = 32;
+    public const META_BASE = 4;
 
     /** Umbral de adherencia (%) para aprobar cada checklist (Pre y Post). */
     public const UMBRAL_CHECKLIST = 90;
@@ -1429,7 +1429,7 @@ class PlanPremiacionController extends Controller
         // ── Armar métricas por pilar ──────────────────────────────────────
         $metricas = [
             // SEGURIDAD
-            'aci' => ['valor' => $porcentajeAci, 'label' => "{$porcentajeAci}%", 'pilar' => 'Seguridad', 'peso' => 10, 'emoji' => '🛡️', 'titulo' => 'ACI', 'meta_desc' => '(Realizadas ÷ 32) × 100'],
+            'aci' => ['valor' => $porcentajeAci, 'label' => "{$porcentajeAci}%", 'pilar' => 'Seguridad', 'peso' => 10, 'emoji' => '🛡️', 'titulo' => 'ACI', 'meta_desc' => '(Realizadas ÷ 4) × 100'],
             'owd' => ['valor' => $owdRuta, 'label' => $owdRuta !== null ? "{$owdRuta}%" : 'N/A', 'pilar' => 'Seguridad', 'peso' => 15, 'emoji' => '✅', 'titulo' => 'OWD Ruta', 'meta_desc' => 'Sin NO OK = 100% | Con NO OK = 0%'],
             'calificaciones' => ['valor' => $promedioCalif, 'label' => $promedioCalif !== null ? "{$promedioCalif}%" : 'N/A', 'pilar' => 'Seguridad', 'peso' => 10, 'emoji' => '🎓', 'titulo' => 'Calificaciones', 'meta_desc' => 'Promedio de notas por módulo'],
             // GENTE

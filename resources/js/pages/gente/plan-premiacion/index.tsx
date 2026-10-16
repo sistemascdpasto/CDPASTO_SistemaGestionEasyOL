@@ -355,7 +355,7 @@ export default function PlanPremiacionIndex({ colaboradores, resumen, top3, peor
                                     <div className="col-span-2 mt-1 mb-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                                         <ShieldCheck className="h-3 w-3" /> Seguridad 35%
                                     </div>
-                                    <div><span className="font-bold text-emerald-700 dark:text-emerald-400">ACI</span> <span className="text-muted-foreground">(10%)</span> — Realizadas ÷ 32 × 100</div>
+                                    <div><span className="font-bold text-emerald-700 dark:text-emerald-400">ACI</span> <span className="text-muted-foreground">(10%)</span> — Realizadas ÷ 4 × 100</div>
                                     <div><span className="font-bold text-emerald-700 dark:text-emerald-400">OWD Ruta</span> <span className="text-muted-foreground">(15%)</span> — Sin NO OK = 100% | Con NO OK = 0%</div>
                                     <div><span className="font-bold text-emerald-700 dark:text-emerald-400">Calificaciones</span> <span className="text-muted-foreground">(10%)</span> — Promedio de notas por módulo</div>
 
