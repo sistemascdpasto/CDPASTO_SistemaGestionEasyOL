@@ -45,6 +45,35 @@ class ActaTallerController extends Controller
             ->toArray();
     }
 
+    /**
+     * Guarda las fotos adjuntadas a una novedad puntual (campos
+     * evidencias_novedad[{i}][] / etiquetas_novedad[{i}][] del formulario),
+     * vinculándolas tanto a la novedad como al acta.
+     */
+    private function guardarEvidenciasNovedad(ActaTaller $acta, ActaTallerNovedad $novedad, Request $request, int $i): void
+    {
+        $archivos = $request->file("evidencias_novedad.{$i}", []);
+        if (empty($archivos)) {
+            return;
+        }
+
+        $etiquetas = $request->input("etiquetas_novedad.{$i}", []);
+
+        foreach ($archivos as $ei => $file) {
+            if (! $file) {
+                continue;
+            }
+
+            $path = $file->store("actas-taller/evidencias/{$acta->id}", 'public');
+            $novedad->evidencias()->create([
+                'acta_taller_id' => $acta->id,
+                'path' => $path,
+                'etiqueta' => $etiquetas[$ei] ?? null,
+                'orden' => $ei,
+            ]);
+        }
+    }
+
     private function formatActa(ActaTaller $acta): array
     {
         return [
@@ -93,8 +122,16 @@ class ActaTallerController extends Controller
                 'responsable'    => $n->responsable,
                 'fecha_reporte'  => $n->fecha_reporte?->format('Y-m-d'),
                 'fecha_solucion' => $n->fecha_solucion?->format('Y-m-d'),
+                'evidencias' => $n->evidencias->map(fn ($e) => [
+                    'id' => $e->id,
+                    'url' => $e->url,
+                    'etiqueta' => $e->etiqueta,
+                ])->toArray(),
             ])->toArray(),
-            'evidencias' => $acta->evidencias->map(fn ($e) => [
+            // Solo evidencia general (sin novedad_id): la que pertenece a una
+            // novedad puntual ya se muestra dentro de esa novedad arriba, no
+            // queremos la misma foto repetida en dos secciones de la pantalla.
+            'evidencias' => $acta->evidencias->whereNull('novedad_id')->values()->map(fn ($e) => [
                 'id'       => $e->id,
                 'url'      => $e->url,
                 'etiqueta' => $e->etiqueta,
@@ -194,6 +231,12 @@ class ActaTallerController extends Controller
             'firma_autorizacion'         => ['nullable'],
             'evidencias'                 => ['nullable', 'array'],
             'evidencias.*'               => ['nullable', 'file', 'image', 'max:5120'],
+            'evidencias_novedad'         => ['nullable', 'array'],
+            'evidencias_novedad.*'       => ['array'],
+            'evidencias_novedad.*.*'     => ['nullable', 'file', 'image', 'max:5120'],
+            'etiquetas_novedad'          => ['nullable', 'array'],
+            'etiquetas_novedad.*'        => ['array'],
+            'etiquetas_novedad.*.*'      => ['nullable', 'string', 'max:100'],
         ]);
 
         $acta = DB::transaction(function () use ($data, $request) {
@@ -229,7 +272,7 @@ class ActaTallerController extends Controller
                 $realizada = filter_var($request->input("novedades.{$i}.realizada"), FILTER_VALIDATE_BOOLEAN);
                 $estado    = $realizada ? 'solucionado' : ($nov['estado'] ?? 'pendiente');
 
-                $acta->novedades()->create([
+                $novedadCreada = $acta->novedades()->create([
                     'titulo'         => $nov['titulo'],
                     'descripcion'    => $nov['descripcion'] ?? null,
                     'categoria'      => $nov['categoria'] ?? null,
@@ -240,6 +283,8 @@ class ActaTallerController extends Controller
                     'fecha_solucion' => $nov['fecha_solucion'] ?? null,
                     'orden'          => $i,
                 ]);
+
+                $this->guardarEvidenciasNovedad($acta, $novedadCreada, $request, $i);
             }
 
             foreach (['firma_entrega', 'firma_recibe', 'firma_autorizacion'] as $campo) {
@@ -272,7 +317,7 @@ class ActaTallerController extends Controller
 
     public function show(ActaTaller $actasTaller): Response
     {
-        $actasTaller->load(['novedades', 'evidencias', 'colaborador']);
+        $actasTaller->load(['novedades.evidencias', 'evidencias', 'colaborador']);
 
         return Inertia::render('flota/actas-taller/show', [
             'acta'          => $this->formatActa($actasTaller),
@@ -322,6 +367,14 @@ class ActaTallerController extends Controller
             'novedades.*.responsable'    => ['nullable', 'string', 'max:100'],
             'novedades.*.fecha_reporte'  => ['nullable', 'date'],
             'novedades.*.fecha_solucion' => ['nullable', 'date'],
+            'evidencias_nuevas'          => ['nullable', 'array'],
+            'evidencias_nuevas.*'        => ['nullable', 'file', 'image', 'max:5120'],
+            'evidencias_novedad'         => ['nullable', 'array'],
+            'evidencias_novedad.*'       => ['array'],
+            'evidencias_novedad.*.*'     => ['nullable', 'file', 'image', 'max:5120'],
+            'etiquetas_novedad'          => ['nullable', 'array'],
+            'etiquetas_novedad.*'        => ['array'],
+            'etiquetas_novedad.*.*'      => ['nullable', 'string', 'max:100'],
         ]);
 
         DB::transaction(function () use ($data, $request, $actasTaller) {
@@ -345,6 +398,8 @@ class ActaTallerController extends Controller
                         ]
                     );
                     $ids[] = $reg->id;
+
+                    $this->guardarEvidenciasNovedad($actasTaller, $reg, $request, $i);
                 }
                 $actasTaller->novedades()->whereNotIn('id', $ids)->delete();
             }

@@ -1,3 +1,5 @@
+import { EvidenciaUploader, type PickedFile } from '@/components/evidencia-uploader';
+import { ImageLightbox } from '@/components/image-lightbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -76,6 +78,7 @@ function toLocal(nov: any): NovedadLocal {
         realizada:            nov.estado === 'solucionado',
         observacion_solucion: nov.observacion_solucion ?? '',
         evidencias:           [],
+        evidenciasGuardadas:  nov.evidencias ?? [],
     };
 }
 
@@ -117,6 +120,8 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
     const [telEntrega,    setTelEntrega]    = useState(acta.telefono_entrega ?? '');
     const [nombreRecibe,  setNombreRecibe]  = useState(acta.nombre_recibe ?? '');
     const [novedades,     setNovedades]     = useState<NovedadLocal[]>((acta.novedades ?? []).map(toLocal));
+    const [evidenciasGenerales, setEvidenciasGenerales] = useState<PickedFile[]>([]);
+    const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
     // Sincroniza estado_acta cuando cambian las novedades
     useEffect(() => {
@@ -130,7 +135,7 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
         id: null, titulo: '', descripcion: '', categoria: '', prioridad: 'media',
         estado: 'pendiente', responsable: '',
         fecha_reporte: new Date().toISOString().split('T')[0],
-        fecha_solucion: '', realizada: false, observacion_solucion: '', evidencias: [],
+        fecha_solucion: '', realizada: false, observacion_solucion: '', evidencias: [], evidenciasGuardadas: [],
     });
     const agregarNovedad       = () => setNovedades(p => [...p, novVacia()]);
     const quitarNovedad        = (i: number) => setNovedades(p => p.filter((_, idx) => idx !== i));
@@ -174,6 +179,7 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
         setNombreEntrega(acta.nombre_entrega ?? '');
         setNombreRecibe(acta.nombre_recibe ?? '');
         setNovedades((acta.novedades ?? []).map(toLocal));
+        setEvidenciasGenerales([]);
         setErrors({});
         setEditando(false);
     };
@@ -203,9 +209,13 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
             fd.append(`novedades[${i}][estado]`,               nov.realizada ? 'solucionado' : 'pendiente');
             fd.append(`novedades[${i}][observacion_solucion]`, nov.observacion_solucion ?? '');
             nov.evidencias.forEach((ev, ei) => {
-                fd.append(`evidencias_novedad_${i}[${ei}]`, ev.file);
-                fd.append(`etiquetas_novedad_${i}[${ei}]`,  ev.etiqueta);
+                fd.append(`evidencias_novedad[${i}][${ei}]`, ev.file);
+                fd.append(`etiquetas_novedad[${i}][${ei}]`,  ev.etiqueta);
             });
+        });
+
+        evidenciasGenerales.forEach((ev, i) => {
+            fd.append(`evidencias_nuevas[${i}]`, ev.file);
         });
 
         const b64Entrega = await canvasToBase64(firmaEntregaRef);
@@ -350,11 +360,17 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
                                 onActualizarObservacion={actualizarObservacion}
                                 onAgregarEvidencia={agregarEvidencia}
                                 onQuitarEvidencia={quitarEvidencia}
+                                onVerEvidencia={setImagenAmpliada}
                                 errors={errors}
                             />
                         ) : (
                             novedades.length > 0
-                                ? <NovedadesTabla novedades={novedades} />
+                                ? (
+                                    <NovedadesTabla
+                                        novedades={novedades.map((n) => ({ ...n, evidencias: n.evidenciasGuardadas }))}
+                                        onVerEvidencia={setImagenAmpliada}
+                                    />
+                                )
                                 : <p className="text-sm text-muted-foreground">Sin novedades registradas.</p>
                         )}
                     </SeccionCard>
@@ -443,23 +459,35 @@ export default function ActasTallerShow({ acta, vehiculos }: Props) {
                         </SeccionCard>
                     )}
 
-                    {/* Evidencias */}
-                    {acta.evidencias?.length > 0 && (
-                        <SeccionCard title={`Evidencia Fotográfica (${acta.evidencias.length})`}>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                                {acta.evidencias.map((ev: any) => (
-                                    <div key={ev.id}>
-                                        <img src={ev.url} alt={ev.etiqueta ?? 'Evidencia'}
-                                            className="h-28 w-full rounded-xl object-cover border border-sidebar-border/70 shadow-sm" />
-                                        {ev.etiqueta && <p className="mt-1 text-center text-[10px] text-muted-foreground">{ev.etiqueta}</p>}
-                                    </div>
-                                ))}
-                            </div>
+                    {/* Evidencias generales del acta */}
+                    {(editando || (acta.evidencias?.length ?? 0) > 0) && (
+                        <SeccionCard title={`Evidencia Fotográfica${acta.evidencias?.length ? ` (${acta.evidencias.length})` : ''}`}>
+                            {(acta.evidencias?.length ?? 0) > 0 && (
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                                    {acta.evidencias.map((ev: any) => (
+                                        <button key={ev.id} type="button" onClick={() => setImagenAmpliada(ev.url)}>
+                                            <img src={ev.url} alt={ev.etiqueta ?? 'Evidencia'}
+                                                className="h-28 w-full rounded-xl object-cover border border-sidebar-border/70 shadow-sm" />
+                                            {ev.etiqueta && <p className="mt-1 text-center text-[10px] text-muted-foreground">{ev.etiqueta}</p>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {editando && (
+                                <div className={(acta.evidencias?.length ?? 0) > 0 ? 'mt-4 border-t border-sidebar-border/70 pt-4 dark:border-sidebar-border' : ''}>
+                                    <EvidenciaUploader
+                                        files={evidenciasGenerales}
+                                        onChange={setEvidenciasGenerales}
+                                        label="Agregar más fotos generales"
+                                    />
+                                </div>
+                            )}
                         </SeccionCard>
                     )}
 
                 </div>
             </form>
+            <ImageLightbox src={imagenAmpliada} onClose={() => setImagenAmpliada(null)} />
 
             {/* Modal eliminar */}
             {confirmEliminar && (
