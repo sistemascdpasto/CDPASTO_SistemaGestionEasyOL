@@ -25,6 +25,7 @@ import {
     Map,
     QrCode,
     ShieldCheck,
+    Shirt,
     Stethoscope,
     TestTube,
     Trophy,
@@ -144,6 +145,7 @@ export const modules: ModuleDef[] = [
         // modules.ts — quitar de Seguridad, agregar en Gente
         { title: 'Glosario', slug: 'glosario', icon: BookOpen },
         { title: 'Mapa de Rutas Críticas', slug: 'rutas-criticas', icon: Map },
+        { title: 'Dotación y EPP', slug: 'dotacion-epp', icon: Shirt },
         ],
     },
     {

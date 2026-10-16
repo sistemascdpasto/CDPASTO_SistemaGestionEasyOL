@@ -11,6 +11,7 @@ import {
     ListChecks,
     Loader2,
     ShieldAlert,
+    Shirt,
     Stethoscope,
     Truck,
     Wrench,
@@ -52,6 +53,7 @@ const ICONOS: Record<string, LucideIcon> = {
     wrench: Wrench,
     'list-checks': ListChecks,
     'file-warning': FileWarning,
+    shirt: Shirt,
 };
 
 // ── Componente ────────────────────────────────────────────────────────────────
