@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Seguridad\Colaborador;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_active',
+        'modulos_personalizados',
     ];
 
     /**
@@ -54,6 +56,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'modulos_personalizados' => 'boolean',
         ];
     }
 
@@ -88,5 +91,10 @@ class User extends Authenticatable
     public function capacitacionRevisiones(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Models\Capacitaciones\CapacitacionRevision::class);
+    }
+
+    public function submoduleAccess(): HasMany
+    {
+        return $this->hasMany(UserSubmoduleAccess::class);
     }
 }

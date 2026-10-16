@@ -5,6 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import {
     capacitacionesSubmodule,
     colaboradoresReadOnlySubmodule,
+    isSubmoduleAccessible,
     modules,
     type ModuleDef,
     type SubModuleDef,
@@ -29,26 +30,32 @@ import AppLogo from './app-logo';
 
 const footerNavItems: NavItem[] = [];
 
-function buildSubNavItems(submodules: SubModuleDef[], moduleSlug: string, color: string, userRoles: string[]): NavItem[] {
+function buildSubNavItems(
+    submodules: SubModuleDef[],
+    moduleSlug: string,
+    color: string,
+    userRoles: string[],
+    isAdmin: boolean,
+    accessibleSubmodules: Record<string, string[]>,
+): NavItem[] {
     return submodules
         .filter((sub) => !sub.allowedRoles || sub.allowedRoles.some((r) => userRoles.includes(r)))
-        .map((sub) =>
-            sub.submodules
-                ? {
-                      title: sub.title,
-                      url: '#',
-                      icon: sub.icon,
-                      color,
-                      items: buildSubNavItems(sub.submodules, moduleSlug, color, userRoles),
-                  }
-                : {
-                      title: sub.title,
-                      url: sub.href ?? (sub.slug ? `/modules/${sub.moduleSlugOverride ?? moduleSlug}/${sub.slug}` : `/modules/${moduleSlug}`),
-                      icon: sub.icon,
-                      color,
-                      shared: sub.shared,
-                  },
-        );
+        .flatMap((sub): NavItem[] => {
+            if (sub.submodules) {
+                const items = buildSubNavItems(sub.submodules, moduleSlug, color, userRoles, isAdmin, accessibleSubmodules);
+                return items.length > 0 ? [{ title: sub.title, url: '#', icon: sub.icon, color, items }] : [];
+            }
+            if (!isSubmoduleAccessible(sub, moduleSlug, isAdmin, accessibleSubmodules)) return [];
+            return [
+                {
+                    title: sub.title,
+                    url: sub.href ?? (sub.slug ? `/modules/${sub.moduleSlugOverride ?? moduleSlug}/${sub.slug}` : `/modules/${moduleSlug}`),
+                    icon: sub.icon,
+                    color,
+                    shared: sub.shared,
+                },
+            ];
+        });
 }
 
 export function AppSidebar() {
@@ -88,7 +95,14 @@ export function AppSidebar() {
             url: `/modules/${mod.slug}`,
             icon: mod.icon,
             color: mod.accent,
-            items: buildSubNavItems(mod.submodules, mod.slug, mod.accent, auth.isAdmin ? ['Administrador'] : auth.roles),
+            items: buildSubNavItems(
+                mod.submodules,
+                mod.slug,
+                mod.accent,
+                auth.isAdmin ? ['Administrador'] : auth.roles,
+                auth.isAdmin,
+                auth.accessibleSubmodules,
+            ),
         })),
         ...(auth.isColaborador
             ? [

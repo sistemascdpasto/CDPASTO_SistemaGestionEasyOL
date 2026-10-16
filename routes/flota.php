@@ -6,7 +6,7 @@ use App\Http\Controllers\Flota\VaradaController;
 use App\Http\Controllers\Flota\VehiculoController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'active', 'role:Administrador|Flota'])
+Route::middleware(['auth', 'active', 'role:Administrador|Flota', 'submodule.access'])
     ->prefix('modules/flota')
     ->name('flota.')
     ->group(function () {

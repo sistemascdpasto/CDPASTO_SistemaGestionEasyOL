@@ -17,7 +17,7 @@ use App\Http\Controllers\Gente\ResponsableRutaController;
 use App\Http\Controllers\Gente\SeguimientoPruebasController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'active', 'role:Administrador|Gente'])
+Route::middleware(['auth', 'active', 'role:Administrador|Gente', 'submodule.access'])
     ->prefix('modules/gente')
     ->name('gente.')
     ->group(function () {
@@ -89,7 +89,7 @@ Route::middleware(['auth', 'active', 'role:Administrador|Gente'])
             ->name('incentivos.importar');
     });
 
-Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Flota|Gente'])
+Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Flota|Gente', 'submodule.access'])
     ->prefix('modules/gente')
     ->name('gente.')
     ->group(function () {
@@ -135,7 +135,7 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Flota|Gente']
             ->name('incentivos.variable');
     });
 
-Route::middleware(['auth', 'active', 'role:Administrador|Gente'])
+Route::middleware(['auth', 'active', 'role:Administrador|Gente', 'submodule.access'])
     ->prefix('modules/gente')
     ->name('gente.')
     ->group(function () {
@@ -143,7 +143,7 @@ Route::middleware(['auth', 'active', 'role:Administrador|Gente'])
             ->name('asistencia-geovictoria.index');
     });
 
-Route::middleware(['auth', 'active', 'role:Administrador|Gente|Seguridad'])
+Route::middleware(['auth', 'active', 'role:Administrador|Gente|Seguridad', 'submodule.access'])
     ->prefix('modules/gente')
     ->name('gente.')
     ->group(function () {
@@ -153,7 +153,7 @@ Route::middleware(['auth', 'active', 'role:Administrador|Gente|Seguridad'])
         Route::delete('correccion-marcaciones/{id}',   [CorreccionMarcacionController::class, 'destroy'])  ->name('correccion-marcaciones.destroy');
     });
 
-Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Gente'])
+Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Gente', 'submodule.access'])
     ->prefix('modules/gente')
     ->name('gente.')
     ->group(function () {
