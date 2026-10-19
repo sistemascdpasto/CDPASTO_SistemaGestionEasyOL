@@ -61,6 +61,26 @@ Route::middleware(['auth', 'active', 'role:Administrador|Gente', 'submodule.acce
             ->name('plan-padrinos.index');
         Route::post('plan-padrinos/toggle', [SeguimientoPruebasController::class, 'toggle'])
             ->name('plan-padrinos.toggle');
+        Route::post('plan-padrinos/criterios/autonomia', [SeguimientoPruebasController::class, 'updateAutonomia'])
+            ->name('plan-padrinos.criterios.autonomia');
+        Route::post('plan-padrinos/criterios/importar', [SeguimientoPruebasController::class, 'importarCriterios'])
+            ->name('plan-padrinos.criterios.importar');
+        Route::post('plan-padrinos/criterios/limpiar', [SeguimientoPruebasController::class, 'limpiarCriterios'])
+            ->name('plan-padrinos.criterios.limpiar');
+        Route::post('plan-padrinos/criterios/toggle-indicador', [SeguimientoPruebasController::class, 'toggleIndicador'])
+            ->name('plan-padrinos.criterios.toggle-indicador');
+        Route::post('plan-padrinos/criterios/columna-extra', [SeguimientoPruebasController::class, 'crearColumnaExtra'])
+            ->name('plan-padrinos.criterios.columna-extra.crear');
+        Route::delete('plan-padrinos/criterios/columna-extra/{columna}', [SeguimientoPruebasController::class, 'eliminarColumnaExtra'])
+            ->name('plan-padrinos.criterios.columna-extra.eliminar');
+        Route::post('plan-padrinos/criterios/columna-extra/{columna}/toggle', [SeguimientoPruebasController::class, 'toggleColumnaExtraValor'])
+            ->name('plan-padrinos.criterios.columna-extra.toggle');
+        Route::post('plan-padrinos/criterios/rol-padrino', [SeguimientoPruebasController::class, 'updateRolPadrino'])
+            ->name('plan-padrinos.criterios.rol-padrino');
+        Route::post('plan-padrinos/padrinos/mensaje', [SeguimientoPruebasController::class, 'updateMensajePadrino'])
+            ->name('plan-padrinos.padrinos.mensaje');
+        Route::post('plan-padrinos/apadrinados/asignar-padrino', [SeguimientoPruebasController::class, 'asignarPadrino'])
+            ->name('plan-padrinos.apadrinados.asignar-padrino');
 
         Route::post('calificaciones/importar', [ColaboradorCalificacionController::class, 'importar'])
             ->name('calificaciones.importar');
@@ -99,6 +119,20 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad|Flota|Gente',
 
         Route::get('plan-padrinos/alertas-bell', [SeguimientoPruebasController::class, 'alertasBell'])
             ->name('plan-padrinos.alertas-bell');
+        Route::get('plan-padrinos/criterios', [SeguimientoPruebasController::class, 'criterios'])
+            ->name('plan-padrinos.criterios');
+        Route::get('plan-padrinos/criterios/plantilla', [SeguimientoPruebasController::class, 'plantillaCriterios'])
+            ->name('plan-padrinos.criterios.plantilla');
+        Route::get('plan-padrinos/padrinos', [SeguimientoPruebasController::class, 'padrinos'])
+            ->name('plan-padrinos.padrinos');
+        Route::get('plan-padrinos/apadrinados', [SeguimientoPruebasController::class, 'apadrinados'])
+            ->name('plan-padrinos.apadrinados');
+        Route::get('plan-padrinos/parejas', [SeguimientoPruebasController::class, 'parejas'])
+            ->name('plan-padrinos.parejas');
+        Route::post('plan-padrinos/evidencias', [SeguimientoPruebasController::class, 'subirEvidencias'])
+            ->name('plan-padrinos.evidencias.subir');
+        Route::delete('plan-padrinos/evidencias/{evidencia}', [SeguimientoPruebasController::class, 'eliminarEvidencia'])
+            ->name('plan-padrinos.evidencias.eliminar');
 
         Route::get('plan-premiacion', [PlanPremiacionController::class, 'index'])
             ->name('plan-premiacion.index');

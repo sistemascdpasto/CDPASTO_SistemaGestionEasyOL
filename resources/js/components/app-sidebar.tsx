@@ -24,6 +24,7 @@ import {
     TestTube,
     Trophy,
     User,
+    UserCheck,
     UserCog,
 } from 'lucide-react';
 import AppLogo from './app-logo';
@@ -109,6 +110,7 @@ export function AppSidebar() {
                   { title: 'Mi Perfil', url: '/portal/perfil', icon: User, color: '#3F7A22' },
                   { title: 'Mis Pruebas', url: '/portal/pruebas', icon: TestTube, color: '#3F7A22' },
                   { title: 'Mi Plan Premiación', url: '/portal/mi-plan-premiacion', icon: Trophy, color: '#D97706' },
+                  { title: 'Mi Plan Padrinos', url: '/portal/mi-plan-padrinos', icon: UserCheck, color: '#7C3AED' },
                   { title: 'Mis Incentivos', url: '/portal/mis-incentivos', icon: Gift, color: '#D97706' },
                   { title: 'Mi Variable', url: '/portal/mi-variable', icon: DollarSign, color: '#D97706' },
                   { title: 'Condición de Salud', url: '/portal/condicion-salud', icon: HeartPulse, color: '#3F7A22' },

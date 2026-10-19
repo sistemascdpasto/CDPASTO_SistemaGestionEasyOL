@@ -71,7 +71,7 @@ return [
         // routes/gente.php sí es de lectura amplia (Seguridad/Flota también
         // lo consultan para su propia campanita) — se usa el conjunto más
         // amplio para no bloquear esa sub-vista a quien ya tiene acceso real.
-        'plan-padrinos' => ['label' => 'Seguimiento Pruebas y Plan Padrinos', 'roles' => ['Gente', 'Seguridad', 'Flota']],
+        'plan-padrinos' => ['label' => 'Plan Padrinos', 'roles' => ['Gente', 'Seguridad', 'Flota']],
         'plan-premiacion' => ['label' => 'Plan Premiación', 'roles' => ['Gente', 'Seguridad', 'Flota']],
         'calificaciones' => ['label' => 'Calificaciones', 'roles' => ['Gente', 'Seguridad', 'Flota']],
         'dpo-academy' => ['label' => 'DPO Academy', 'roles' => ['Gente', 'Seguridad', 'Flota']],

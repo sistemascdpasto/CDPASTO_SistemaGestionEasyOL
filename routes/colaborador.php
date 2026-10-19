@@ -16,6 +16,7 @@ Route::middleware(['auth', 'active', 'role:Colaborador|Administrador|Seguridad']
         Route::get('pruebas', [PortalController::class, 'pruebas'])->name('pruebas');
 
         Route::get('mi-plan-premiacion', [PortalController::class, 'miPlanPremiacion'])->name('mi-plan-premiacion');
+        Route::get('mi-plan-padrinos', [PortalController::class, 'miPlanPadrinos'])->name('mi-plan-padrinos');
         Route::get('mis-incentivos', [PortalController::class, 'misIncentivos'])->name('mis-incentivos');
         Route::get('mi-variable', [PortalController::class, 'miVariable'])->name('mi-variable');
         Route::get('alertas', [PortalController::class, 'alertas'])->name('alertas');

@@ -26,6 +26,7 @@ import {
     QrCode,
     ShieldCheck,
     Shirt,
+    Star,
     Stethoscope,
     TestTube,
     Trophy,
@@ -156,7 +157,18 @@ export const modules: ModuleDef[] = [
         submodules: [
             { title: 'Colaboradores', slug: 'colaboradores', icon: UserCheck },
             { title: 'Corrección de Marcaciones', slug: 'correccion-marcaciones', icon: FileSpreadsheet },
-            { title: 'Seguimiento Pruebas y Plan Padrinos', slug: 'plan-padrinos', icon: HeartHandshake },
+            {
+                title: 'Plan Padrinos',
+                icon: HeartHandshake,
+                href: '/modules/gente/plan-padrinos',
+                submodules: [
+                    { title: 'Seguimiento Pruebas', href: '/modules/gente/plan-padrinos', icon: HeartHandshake },
+                    { title: 'Criterios', href: '/modules/gente/plan-padrinos/criterios', icon: ListChecks },
+                    { title: 'Padrinos', href: '/modules/gente/plan-padrinos/padrinos', icon: Star },
+                    { title: 'Apadrinados', href: '/modules/gente/plan-padrinos/apadrinados', icon: Users },
+                    { title: 'Parejas', href: '/modules/gente/plan-padrinos/parejas', icon: HeartHandshake },
+                ],
+            },
             { title: 'Plan Premiación', slug: 'plan-premiacion', icon: Trophy, allowedRoles: ['Administrador', 'Gente'] },
             { title: 'Calificaciones', slug: 'calificaciones', icon: GraduationCap },
             { title: 'DPO Academy', slug: 'dpo-academy', icon: BookOpen },

@@ -1,0 +1,1136 @@
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import { ApadrinadoCard } from './apadrinado-card';
+import {
+    ArrowLeft,
+    Check,
+    ChevronRight,
+    Clock,
+    Info,
+    Phone,
+    Plus,
+    Search,
+    Sparkles,
+    Sprout,
+    Star,
+    UserCheck,
+    UserPlus,
+    Users,
+    X,
+} from 'lucide-react';
+import { useState, type CSSProperties } from 'react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Gente', href: '/modules/gente' },
+    { title: 'Plan Padrinos', href: '/modules/gente/plan-padrinos' },
+    { title: 'Padrinos', href: '/modules/gente/plan-padrinos/padrinos' },
+];
+
+interface ApadrinadoListaItem {
+    id: number;
+    nombre_completo: string;
+    cargo: string;
+    imagen: string | null;
+    fecha_inicio: string;
+    fecha_fin: string | null;   // null = activo
+    dias: number;
+    activo: boolean;
+}
+
+interface HistorialApadrinadoItem {
+    padrino_id: number;
+    padrino_nombre: string;
+    padrino_cargo: string;
+    padrino_imagen: string | null;
+    fecha_inicio: string;
+    fecha_fin: string | null;
+    dias: number;
+    activo: boolean;
+}
+
+export interface Padrino {
+    id: number;
+    cedula: string;
+    nombre_completo: string;
+    cargo: string;
+    imagen: string | null;
+    mensaje_padrino: string | null;
+    correo: string | null;
+    celular: string | null;
+    // ingreso
+    fecha_ingreso_texto: string;
+    dias_en_empresa: number;
+    // historial
+    veces_padrino: number;
+    dias_total_padrino: number;
+    tiempo_total_texto: string;
+    apadrinados_lista: ApadrinadoListaItem[];
+    veces_apadrinado: number;
+    historial_apadrinado: HistorialApadrinadoItem[];
+}
+
+interface ApadrinadoSummary {
+    id: number;
+    cedula: string;
+    nombre_completo: string;
+    cargo: string;
+    imagen: string | null;
+    fecha_ingreso: string;
+    antiguedad_texto?: string;
+    celular?: string | null;
+    padrino_id: number | null;
+}
+
+interface Props {
+    padrinos: Padrino[];
+    apadrinadosList?: ApadrinadoSummary[];
+}
+
+// ─── Dialog de historial del Padrino ─────────────────────────────────────────
+function DetallesPadrinoDialog({
+    padrino,
+    open,
+    onClose,
+}: {
+    padrino: Padrino;
+    open: boolean;
+    onClose: () => void;
+}) {
+    return (
+        <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+            <DialogContent className="w-full max-w-lg rounded-2xl p-0 overflow-hidden shadow-2xl border-0">
+                <DialogTitle className="sr-only">Historial de {padrino.nombre_completo}</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Estadísticas de participación en el Plan Padrino de {padrino.nombre_completo}
+                </DialogDescription>
+
+                {/* ── Cabecera ── */}
+                <div className="relative flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-green-500 px-5 py-4">
+                    {padrino.imagen ? (
+                        <img
+                            src={`/storage/${padrino.imagen}`}
+                            alt={padrino.nombre_completo}
+                            className="h-14 w-14 rounded-full object-cover border-2 border-white/60 shrink-0"
+                        />
+                    ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 border-2 border-white/40 shrink-0">
+                            <UserCheck className="h-7 w-7 text-white" />
+                        </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Historial Plan Padrino</span>
+                        <h3 className="text-base font-black text-white leading-tight truncate">{padrino.nombre_completo}</h3>
+                        <span className="text-[11px] text-white/80 truncate">{padrino.cargo}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                {/* ── Cuerpo scrollable ── */}
+                <div className="flex flex-col gap-4 p-5 max-h-[70vh] overflow-y-auto">
+
+                    {/* Tiempo total en la empresa */}
+                    <div className="flex items-center gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 shrink-0">
+                            <Clock className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Ingreso a la empresa</span>
+                            <span className="text-sm font-bold text-foreground">
+                                {padrino.fecha_ingreso_texto}
+                                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                    ({padrino.dias_en_empresa.toLocaleString()} días en la empresa)
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Stats resumen */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="flex flex-col items-center gap-1 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center">
+                            <Star className="h-4 w-4 text-emerald-600 fill-emerald-200" />
+                            <span className="text-2xl font-black text-emerald-700 leading-none">{padrino.veces_padrino}</span>
+                            <span className="text-[10px] font-semibold text-emerald-600">{padrino.veces_padrino === 1 ? 'vez padrino' : 'veces padrino'}</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1 rounded-xl bg-green-50 border border-green-200 p-3 text-center">
+                            <Clock className="h-4 w-4 text-green-600" />
+                            <span className="text-xs font-black text-green-700 leading-tight">
+                                {padrino.dias_total_padrino > 0 ? padrino.tiempo_total_texto : '—'}
+                            </span>
+                            <span className="text-[10px] font-semibold text-green-600">tiempo como padrino</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1 rounded-xl bg-sky-50 border border-sky-200 p-3 text-center">
+                            <Sparkles className="h-4 w-4 text-sky-600" />
+                            <span className="text-2xl font-black text-sky-700 leading-none">{padrino.veces_apadrinado}</span>
+                            <span className="text-[10px] font-semibold text-sky-600">{padrino.veces_apadrinado === 1 ? 'vez apadrinado' : 'veces apadrinado'}</span>
+                        </div>
+                    </div>
+
+                    {/* ── Como Padrino: lista con fechas ── */}
+                    <div className="flex flex-col gap-2">
+                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Star className="h-3.5 w-3.5 text-emerald-600 fill-emerald-200" />
+                            Personas que ha apadrinado
+                        </p>
+
+                        {padrino.apadrinados_lista.length === 0 ? (
+                            <div className="flex items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-4 text-xs text-muted-foreground gap-2">
+                                <Info className="h-3.5 w-3.5 opacity-50" />
+                                Aún no ha apadrinado a nadie.
+                            </div>
+                        ) : (
+                            <ul className="flex flex-col gap-1.5">
+                                {padrino.apadrinados_lista.map((a, i) => (
+                                    <li key={`${a.id}-${i}`} className="flex items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-2">
+                                        {a.imagen ? (
+                                            <img src={`/storage/${a.imagen}`} alt={a.nombre_completo}
+                                                className="h-8 w-8 rounded-full object-cover border border-emerald-200 shrink-0" />
+                                        ) : (
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 shrink-0">
+                                                <UserCheck className="h-4 w-4 text-emerald-600" />
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-xs font-semibold text-foreground truncate">{a.nombre_completo}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate">{a.cargo}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end shrink-0 text-right gap-0.5">
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {a.fecha_inicio} → {a.fecha_fin ?? <span className="text-emerald-600 font-semibold">Activo</span>}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                                                {a.dias} días
+                                            </span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* ── Como Apadrinado: lista con fechas ── */}
+                    <div className="flex flex-col gap-2">
+                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5 text-sky-600" />
+                            Cuando fue apadrinado
+                        </p>
+
+                        {padrino.historial_apadrinado.length === 0 ? (
+                            <div className="flex items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-4 text-xs text-muted-foreground gap-2">
+                                <Info className="h-3.5 w-3.5 opacity-50" />
+                                No fue apadrinado en ningún período.
+                            </div>
+                        ) : (
+                            <ul className="flex flex-col gap-1.5">
+                                {padrino.historial_apadrinado.map((h, i) => (
+                                    <li key={`ap-${h.padrino_id}-${i}`} className="flex items-center gap-3 rounded-lg border border-sky-100 bg-sky-50/40 px-3 py-2">
+                                        {h.padrino_imagen ? (
+                                            <img src={`/storage/${h.padrino_imagen}`} alt={h.padrino_nombre}
+                                                className="h-8 w-8 rounded-full object-cover border border-sky-200 shrink-0" />
+                                        ) : (
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 shrink-0">
+                                                <Star className="h-4 w-4 text-sky-600" />
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wide">Padrino Guía</span>
+                                            <span className="text-xs font-semibold text-foreground truncate">{h.padrino_nombre}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate">{h.padrino_cargo}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end shrink-0 text-right gap-0.5">
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {h.fecha_inicio} → {h.fecha_fin ?? <span className="text-sky-600 font-semibold">Activo</span>}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 rounded-full px-1.5 py-0.5">
+                                                {h.dias} días
+                                            </span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// ─── Mini card del grid para Padrinos ───────────────────────────────────────
+function MiniCard({
+    padrino,
+    onClick,
+    modoSeleccion,
+    isSelected,
+    onSelect,
+    onDetalles,
+}: {
+    padrino: Padrino;
+    onClick: () => void;
+    modoSeleccion?: boolean;
+    isSelected?: boolean;
+    onSelect?: () => void;
+    onDetalles: (e: React.MouseEvent) => void;
+}) {
+    const partes = padrino.nombre_completo.trim().split(' ');
+    const nombre1 = partes[0] ?? '';
+    const nombre2 = partes.slice(1, 3).join(' ');
+
+    return (
+        <div
+            onClick={onClick}
+            className={`group relative overflow-hidden rounded-2xl shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left bg-white border cursor-pointer ${
+                isSelected
+                    ? 'ring-4 ring-emerald-600 border-emerald-600 scale-[1.02]'
+                    : 'border-green-100 hover:border-emerald-300'
+            }`}
+            style={{ aspectRatio: '3/4' }}
+        >
+            {/* CÍRCULO CON CHECK DE SELECCIÓN */}
+            {modoSeleccion && onSelect && (
+                <button
+                    type="button"
+                    title={isSelected ? 'Padrino seleccionado' : 'Seleccionar este Padrino'}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect();
+                    }}
+                    className={`absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all shadow-md cursor-pointer ${
+                        isSelected
+                            ? 'bg-emerald-600 border-emerald-600 text-white scale-110'
+                            : 'bg-white/95 border-emerald-400 text-emerald-600 hover:bg-emerald-600 hover:text-white'
+                    }`}
+                >
+                    <Check className={`h-4 w-4 stroke-[3] ${isSelected ? 'opacity-100' : 'opacity-60'}`} />
+                </button>
+            )}
+
+            {/* Fondo con ondas decorativas */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 300 400" preserveAspectRatio="none">
+                <ellipse cx="270" cy="30" rx="80" ry="80" fill="#bbf7d0" opacity="0.5" />
+                <ellipse cx="-20" cy="380" rx="100" ry="80" fill="#86efac" opacity="0.4" />
+                <path d="M0,300 Q150,250 300,320 L300,400 L0,400 Z" fill="#dcfce7" opacity="0.6" />
+            </svg>
+
+            {/* Foto grande — 58% superior */}
+            <div className="relative h-[58%] overflow-hidden">
+                {padrino.imagen ? (
+                    <img
+                        src={`/storage/${padrino.imagen}`}
+                        alt={padrino.nombre_completo}
+                        className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg,#d1fae5,#6ee7b7)' }}>
+                        <UserCheck className="h-16 w-16 text-green-600" />
+                    </div>
+                )}
+                {/* Onda verde sobre la foto */}
+                <svg className="absolute bottom-0 left-0 w-full pointer-events-none" viewBox="0 0 300 40" preserveAspectRatio="none" style={{ height: 30 }}>
+                    <path d="M0,20 Q75,0 150,20 Q225,40 300,20 L300,40 L0,40 Z" fill="white" />
+                </svg>
+                {/* Badge */}
+                <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                    <Star className="h-2.5 w-2.5 fill-white" /> Padrino
+                </span>
+            </div>
+
+            {/* Datos — 42% inferior */}
+            <div className="relative flex flex-col items-center justify-center px-2 pb-2.5 pt-0.5 text-center gap-0.5 min-w-0">
+                <p className="text-sm font-black text-green-500 leading-tight truncate w-full">{nombre1}</p>
+                <p className="text-sm font-black text-green-700 leading-tight truncate w-full">{nombre2}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1 w-full">{padrino.cargo}</p>
+                <div className="mt-1 flex flex-col items-center gap-0.5 w-full text-[10px] text-gray-600">
+                    <div className="flex items-center justify-center gap-1 w-full min-w-0">
+                        <Phone className="h-3 w-3 shrink-0 text-emerald-600" />
+                        <span className="truncate font-medium">{padrino.celular || '—'}</span>
+                    </div>
+                </div>
+                {/* Botón Detalles */}
+                <button
+                    type="button"
+                    onClick={onDetalles}
+                    className="mt-1.5 flex items-center justify-center gap-1 w-full rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 py-1 text-[10px] font-bold text-emerald-700 transition-colors"
+                >
+                    <Info className="h-3 w-3" />
+                    Detalles
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Mini card del grid para Apadrinados ─────────────────────────────────────
+function ApadrinadoMiniCard({
+    apadrinado,
+    onClick,
+    isSelected,
+    onSelect,
+}: {
+    apadrinado: ApadrinadoSummary;
+    onClick: () => void;
+    isSelected: boolean;
+    onSelect: () => void;
+}) {
+    const partes = apadrinado.nombre_completo.trim().split(' ');
+    const nombre1 = partes[0] ?? '';
+    const nombre2 = partes.slice(1, 3).join(' ');
+
+    return (
+        <div
+            onClick={onClick}
+            className={`group relative overflow-hidden rounded-2xl shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left bg-white border cursor-pointer ${
+                isSelected
+                    ? 'ring-4 ring-sky-600 border-sky-600 scale-[1.02]'
+                    : 'border-sky-100 hover:border-sky-300'
+            }`}
+            style={{ aspectRatio: '3/4' }}
+        >
+            {/* CÍRCULO CON CHECK DE SELECCIÓN */}
+            <button
+                type="button"
+                title={isSelected ? 'Apadrinado seleccionado' : 'Seleccionar este Apadrinado'}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect();
+                }}
+                className={`absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all shadow-md cursor-pointer ${
+                    isSelected
+                        ? 'bg-sky-600 border-sky-600 text-white scale-110'
+                        : 'bg-white/95 border-sky-400 text-sky-600 hover:bg-sky-600 hover:text-white'
+                }`}
+            >
+                <Check className={`h-4 w-4 stroke-[3] ${isSelected ? 'opacity-100' : 'opacity-60'}`} />
+            </button>
+
+            {/* Fondo con ondas decorativas azuladas */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 300 400" preserveAspectRatio="none">
+                <ellipse cx="270" cy="30" rx="80" ry="80" fill="#bae6fd" opacity="0.5" />
+                <ellipse cx="-20" cy="380" rx="100" ry="80" fill="#7dd3fc" opacity="0.4" />
+                <path d="M0,300 Q150,250 300,320 L300,400 L0,400 Z" fill="#e0f2fe" opacity="0.6" />
+            </svg>
+
+            {/* Foto grande — 70% superior */}
+            <div className="relative h-[68%] overflow-hidden">
+                {apadrinado.imagen ? (
+                    <img
+                        src={`/storage/${apadrinado.imagen}`}
+                        alt={apadrinado.nombre_completo}
+                        className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200">
+                        <Users className="h-16 w-16 text-sky-600" />
+                    </div>
+                )}
+                {/* Onda sobre la foto */}
+                <svg className="absolute bottom-0 left-0 w-full pointer-events-none" viewBox="0 0 300 40" preserveAspectRatio="none" style={{ height: 40 }}>
+                    <path d="M0,20 Q75,0 150,20 Q225,40 300,20 L300,40 L0,40 Z" fill="white" />
+                </svg>
+                {/* Badge */}
+                <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+                    Apadrinado
+                </span>
+            </div>
+
+            {/* Datos — 32% inferior */}
+            <div className="relative flex flex-col items-center justify-center px-3 pb-3 pt-1 text-center gap-0.5">
+                <p className="text-sm font-black text-sky-600 leading-tight">{nombre1}</p>
+                <p className="text-sm font-black text-sky-800 leading-tight">{nombre2}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{apadrinado.cargo}</p>
+                <p className="text-[9px] font-semibold text-sky-700">Ingreso: {apadrinado.fecha_ingreso}</p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Helpers de diseño ───────────────────────────────────────────────────────
+// Lienzo de referencia 1127 x 713 px. Todo se escala con unidades de contenedor
+// (cqw), por lo que la tarjeta se ve igual a cualquier ancho del modal.
+const W = 800;
+const H = 460;
+const cq = (px: number) => `${((px / W) * 100).toFixed(3)}cqw`;
+const at = (x: number, y: number, w?: number): CSSProperties => ({
+    position: 'absolute',
+    left: `${((x / W) * 100).toFixed(3)}%`,
+    top: `${((y / H) * 100).toFixed(3)}%`,
+    ...(w ? { width: `${((w / W) * 100).toFixed(3)}%` } : {}),
+});
+const ic = (px: number): CSSProperties => ({ width: cq(px), height: cq(px) });
+
+const HAND = "'Caveat', 'Segoe Script', cursive";
+const SANS = "'Poppins', 'Segoe UI', system-ui, sans-serif";
+const INK = '#052e16';
+const GREEN = '#1e9a3b';
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Poppins:wght@400;500;600;800&display=swap');`;
+
+
+
+// ─── Tarjeta corporativa modal ───────────────────────────────────────────────
+export function PadrinoCard({ padrino, canManage }: { padrino: Padrino; canManage: boolean }) {
+    const partes = padrino.nombre_completo.trim().split(' ');
+    const primerNombre = partes[0] ?? '';
+    const apellido = partes.slice(1, 3).join(' ');
+
+    // Si el nombre es largo, se reduce la letra para no invadir la columna derecha
+    const masLargo = Math.max(primerNombre.length, apellido.length, 1);
+    const nameSize = Math.max(4, Math.min(52, (52 * 7.5) / masLargo));
+
+    const [mensaje, setMensaje] = useState(padrino.mensaje_padrino ?? '');
+    const [editando, setEditando] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = () => {
+        setSaving(true);
+        router.post(
+            route('gente.plan-padrinos.padrinos.mensaje'),
+            { colaborador_id: padrino.id, mensaje_padrino: mensaje },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSaving(false);
+                    setSaved(true);
+                    setEditando(false);
+                    setTimeout(() => setSaved(false), 2500);
+                },
+                onError: () => setSaving(false),
+            },
+        );
+    };
+
+    const contactos = [
+        { texto: padrino.celular || '—' },
+    ];
+
+    const lineasMensaje = mensaje.trim().split('\n').filter(Boolean);
+
+    return (
+        <div
+            className="relative w-full overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ aspectRatio: `${W} / ${H}`, containerType: 'inline-size', fontFamily: SANS }}
+        >
+            <style>{FONTS}</style>
+
+            {/* ───────────── Fondo con curvas ───────────── */}
+            <svg
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox={`0 0 ${W} ${H}`}
+                preserveAspectRatio="none"
+                aria-hidden
+            >
+                <defs>
+                    <linearGradient id="pc-bg" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#ecfbef" />
+                    </linearGradient>
+                    <linearGradient id="pc-swoosh" x1="0" y1="1" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#d9f99d" />
+                        <stop offset="100%" stopColor="#4ade80" />
+                    </linearGradient>
+                </defs>
+                <rect width={W} height={H} fill="url(#pc-bg)" />
+                {/* Curva superior que sale de la foto */}
+                <path d="M430 240 C 470 130 600 40 740 0 L 575 0 C 520 70 470 150 430 240 Z" fill="url(#pc-swoosh)" opacity="0.75" />
+                {/* Olas inferior derecha */}
+                <path d="M1127 440 C 1040 480 900 540 720 590 C 600 625 500 690 400 713 L 1127 713 Z" fill="#bbf7d0" opacity="0.45" />
+                <path d="M1127 520 C 1020 560 880 610 760 650 C 680 680 610 700 560 713 L 1127 713 Z" fill="#86efac" opacity="0.35" />
+            </svg>
+
+            {/* ───────────── Foto con borde difuminado ───────────── */}
+            <div
+                className="absolute left-0 top-0 h-full"
+                style={{
+                    width: '44%',
+                    WebkitMaskImage: 'linear-gradient(to right, #000 68%, transparent 100%)',
+                    maskImage: 'linear-gradient(to right, #000 68%, transparent 100%)',
+                }}
+            >
+                {padrino.imagen ? (
+                    <img
+                        src={`/storage/${padrino.imagen}`}
+                        alt={padrino.nombre_completo}
+                        className="h-full w-full object-cover object-top"
+                    />
+                ) : (
+                    <div
+                        className="flex h-full w-full items-center justify-center"
+                        style={{ background: 'linear-gradient(160deg,#d1fae5 0%,#6ee7b7 60%,#16a34a 100%)' }}
+                    >
+                        <UserCheck className="text-white/70" style={ic(160)} />
+                    </div>
+                )}
+            </div>
+
+            {/* ───────────── Ola inferior izquierda + slogan ───────────── */}
+            <div className="pointer-events-none absolute bottom-0 left-0 h-[43%] w-[49%]">
+                <svg viewBox="0 0 300 200" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden>
+                    <defs>
+                        <linearGradient id="pc-lime" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#d9f99d" />
+                            <stop offset="100%" stopColor="#4ade80" />
+                        </linearGradient>
+                        <linearGradient id="pc-dark" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#166534" />
+                            <stop offset="100%" stopColor="#052e16" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M0 45 C 70 35, 170 70, 300 200 L0 200 Z" fill="url(#pc-lime)" />
+                    <path d="M0 62 C 70 52, 160 88, 272 200 L0 200 Z" fill="url(#pc-dark)" />
+                </svg>
+
+                <div
+                    className="absolute origin-bottom-left text-white"
+                    style={{ left: cq(60), bottom: cq(20), transform: 'rotate(-09deg)' }}
+                >
+                    <p style={{ fontFamily: HAND, fontWeight: 600, fontSize: cq(25), lineHeight: 1.0 }}>
+                        Juntos
+                        <br />
+                        hacemos
+                        <br />
+                        la diferencia
+                    </p>
+                    <svg viewBox="0 0 120 12" style={{ width: cq(100), marginTop: cq(3) }} aria-hidden>
+                        <path d="M2 9 C 30 3, 80 2, 118 4" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    </svg>
+                </div>
+            </div>
+
+
+            {/* ───────────── Nombre, cargo y teléfono ───────────── */}
+            <div style={at(355, 44)}>
+                <h2
+                    style={{
+                        fontSize: cq(nameSize),
+                        fontWeight: 600,
+                        lineHeight: 0.78,
+                        letterSpacing: '-0.05em',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    <span style={{ display: 'block', color: '#06281a' }}>{primerNombre}</span>
+                    {apellido && <span style={{ display: 'block', color: GREEN }}>{apellido}</span>}
+                </h2>
+                <div style={{ height: cq(3), width: cq(38), background: GREEN, marginTop: cq(2) }} />
+                <p style={{ fontSize: cq(14), fontWeight: 500, color: '#0f3b26', marginTop: cq(9), whiteSpace: 'nowrap' }}>
+                    {padrino.cargo}
+                </p>
+                {/* Teléfono debajo del cargo — solo número, sin ícono */}
+                {contactos.map(({ texto }, idx) => (
+                    <p key={idx} style={{ fontSize: cq(12), color: '#14301f', marginTop: cq(6), whiteSpace: 'nowrap' }}>
+                        {texto}
+                    </p>
+                ))}
+            </div>
+
+            {/* ───────────── Frase + pincel (mensaje editable) ───────────── */}
+            <div
+                style={{
+                    ...at(355, editando ? 148 : 158, 390),
+                    transform: editando ? 'none' : 'rotate(-3deg)',
+                    transformOrigin: 'left top',
+                }}
+            >
+                <svg viewBox="0 0 60 40" style={{ position: 'absolute', right: cq(-9), top: cq(-36), width: cq(40) }} aria-hidden>
+                    <g stroke={INK} strokeWidth="3" strokeLinecap="round">
+                        <path d="M30 4 L38 20" />
+                        <path d="M44 8 L56 14" />
+                        <path d="M20 12 L24 22" />
+                    </g>
+                </svg>
+
+
+
+                {editando && canManage ? (
+                    <div style={{ marginTop: cq(20), display: 'flex', flexDirection: 'column', gap: cq(6) }}>
+                        <textarea
+                            value={mensaje}
+                            onChange={(e) => setMensaje(e.target.value)}
+                            maxLength={500}
+                            autoFocus
+                            rows={3}
+                            className="w-full resize-none border-2 border-green-500 bg-green-50 text-green-900 uppercase focus:outline-none focus:ring-2 focus:ring-green-500"
+                            style={{
+                                fontFamily: HAND,
+                                fontWeight: 700,
+                                fontSize: cq(18),
+                                lineHeight: 1.1,
+                                padding: cq(8),
+                                borderRadius: cq(8),
+                            }}
+                        />
+                        <div style={{ display: 'flex', gap: cq(14), fontSize: cq(13) }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditando(false);
+                                    setMensaje(padrino.mensaje_padrino ?? '');
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={saving}
+                                onClick={handleSave}
+                                className="font-bold text-green-700 hover:text-green-900 disabled:opacity-50"
+                            >
+                                {saving ? 'Guardando...' : '✓ Guardar'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div
+                            className={`relative block w-full ${canManage ? 'cursor-pointer' : ''}`}
+                            style={{ marginTop: cq(20) }}
+                            onClick={() => canManage && setEditando(true)}
+                            title={canManage ? 'Clic para editar' : undefined}
+                        >
+                            <svg viewBox="5 5 270 130" preserveAspectRatio="none" className="absolute inset-2 h-full w-full" aria-hidden>
+                                <defs>
+                                    <linearGradient id="pc-brush" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor="#3aa84f" />
+                                        <stop offset="100%" stopColor="#15803d" />
+                                    </linearGradient>
+                                </defs>
+                                <path
+                                    d="M6 20 C 40 6, 130 16, 264 4 L 270 44 C 252 62, 264 84, 260 120 C 160 128, 90 112, 2 126 C 14 92, -2 58, 6 20 Z"
+                                    fill="url(#pc-brush)"
+                                />
+                            </svg>
+                            <div
+                                className="relative text-center text-white"
+                                style={{ padding: `${cq(30)} ${cq(5)} ${cq(24)}` }}
+                            >
+                                {lineasMensaje.length > 0 ? (
+                                    lineasMensaje.map((l, i, arr) => (
+                                        <p
+                                            key={i}
+                                            style={{
+                                                fontFamily: HAND,
+                                                fontWeight: 80,
+                                                fontSize: cq(21),
+                                                lineHeight: 1.0,
+                                                textTransform: 'uppercase',
+                                                color: i === arr.length - 1 ? '#d9f99d' : '#ffffff',
+                                            }}
+                                        >
+                                            {l}
+                                        </p>
+                                    ))
+                                ) : (
+                                    <p
+                                        style={{
+                                            fontFamily: HAND,
+                                            fontWeight: 500,
+                                            fontSize: cq(8),
+                                            lineHeight: 1.08,
+                                            textTransform: 'uppercase',
+                                            opacity: 0.6,
+                                        }}
+                                    >
+                                        {canManage ? 'Clic para agregar mensaje...' : '—'}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+
+                    </>
+                )}
+
+                {saved && (
+                    <p style={{ fontSize: cq(13), color: '#15803d', fontWeight: 600, marginTop: cq(4) }}>✓ Guardado</p>
+                )}
+            </div>
+
+
+
+            {/* ───────────── Mi experiencia ───────────── */}
+          <div style={{ ...at(610, 370), display: 'flex', alignItems: 'center', gap: cq(10) }}>
+    <Sprout style={ic(30)} color="#15803d" strokeWidth={1.8} />
+    <div style={{ transform: 'rotate(-6deg)' }}>
+        <p style={{ fontFamily: HAND, fontWeight: 300, fontSize: cq(23), lineHeight: 1, color: '#14532d' }}>
+            Mi experiencia
+            <br />
+            también es
+            <br />
+            un impulso.
+        </p>
+    </div>
+</div>
+
+
+            {/* ───────────── CTA ───────────── */}
+
+<button
+    type="button"
+    className="absolute flex items-center justify-center text-left text-white transition-transform hover:scale-[1.03]"
+    style={{
+        ...at(570, 372, 215),
+        left: '50%',
+        transform: 'translateX(-50%)',
+        height: `${((58 / H) * 100).toFixed(3)}%`,
+        padding: `0 ${cq(14)}`,
+        gap: cq(7),
+        borderRadius: 9999,
+        background: 'linear-gradient(135deg,#15803d,#166534 60%,#14532d)',
+        border: `${cq(2)} solid #a3e635`,
+        boxShadow: '0 8px 20px rgba(21,128,61,.35)',
+    }}
+>
+    <Users style={ic(26)} strokeWidth={1.9} />
+    <span style={{ lineHeight: 1.2 }}>
+        <strong style={{ display: 'block', fontSize: cq(13) }}>
+            Hoy soy padrino.
+        </strong>
+        <span style={{ display: 'block', fontSize: cq(8.5), opacity: 0.92 }}>
+            mañana seré parte de la historia,
+            <br />que "ellos" construirán.
+        </span>
+    </span>
+    <svg viewBox="0 0 50 14" style={{ position: 'absolute', right: cq(14), bottom: cq(7), width: cq(34) }} aria-hidden>
+        <path d="M2 10 C16 2,32 2,47 7 M41 3 L47 7 L41 11" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+</button>
+
+        </div>
+    );
+}
+
+// ─── Página principal ────────────────────────────────────────────────────────
+export default function PadrinosIndex({ padrinos, apadrinadosList = [] }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const canManage = auth.isAdmin || auth.roles.includes('Gente');
+
+    // Modals de inspección de tarjetas
+    const [selectedPadrinoModal, setSelectedPadrinoModal] = useState<Padrino | null>(null);
+    const [selectedApadrinadoModal, setSelectedApadrinadoModal] = useState<ApadrinadoSummary | null>(null);
+    const [detallePadrino, setDetallePadrino] = useState<Padrino | null>(null);
+
+    // MODO SELECCIÓN DIRECTA DESDE LAS CARDS
+    const [modoSeleccion, setModoSeleccion] = useState(false);
+    const [pasoSeleccion, setPasoSeleccion] = useState<1 | 2>(1);
+    const [selectedPadrinoId, setSelectedPadrinoId] = useState<number | null>(null);
+    const [selectedApadrinadoId, setSelectedApadrinadoId] = useState<number | null>(null);
+    const [searchApadrinado, setSearchApadrinado] = useState('');
+    const [searchPadrino, setSearchPadrino] = useState('');
+    const [savingSeleccion, setSavingSeleccion] = useState(false);
+
+    const handleIniciarSeleccion = () => {
+        setModoSeleccion(true);
+        setPasoSeleccion(1);
+        setSelectedPadrinoId(padrinos.length > 0 ? padrinos[0].id : null);
+        setSelectedApadrinadoId(null);
+        setSearchApadrinado('');
+    };
+
+    const handleCancelarSeleccion = () => {
+        setModoSeleccion(false);
+        setPasoSeleccion(1);
+        setSelectedPadrinoId(null);
+        setSelectedApadrinadoId(null);
+    };
+
+    const handleGuardarApadrinamiento = () => {
+        if (!selectedPadrinoId || !selectedApadrinadoId) return;
+        setSavingSeleccion(true);
+        router.post(
+            route('gente.plan-padrinos.apadrinados.asignar-padrino'),
+            {
+                colaborador_id: selectedApadrinadoId,
+                padrino_id: selectedPadrinoId,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setModoSeleccion(false);
+                    setPasoSeleccion(1);
+                    setSelectedPadrinoId(null);
+                    setSelectedApadrinadoId(null);
+                },
+                onFinish: () => setSavingSeleccion(false),
+            }
+        );
+    };
+
+    const padrinoSeleccionadoObj = padrinos.find((p) => p.id === selectedPadrinoId);
+
+    // Filtrado local del grid de padrinos
+    const padrinosFiltrados = padrinos.filter((p) => {
+        if (!searchPadrino.trim()) return true;
+        const q = searchPadrino.toLowerCase();
+        return (
+            p.nombre_completo.toLowerCase().includes(q) ||
+            p.cargo.toLowerCase().includes(q) ||
+            p.cedula.includes(q)
+        );
+    });
+
+    // Solo mostrar colaboradores SIN padrino asignado (padrino_id === null)
+    const apadrinadosFiltrados = apadrinadosList
+        .filter((a) => a.padrino_id === null)
+        .filter((a) => {
+            if (!searchApadrinado.trim()) return true;
+            const query = searchApadrinado.toLowerCase();
+            return (
+                a.nombre_completo.toLowerCase().includes(query) ||
+                a.cargo.toLowerCase().includes(query) ||
+                a.cedula.includes(query)
+            );
+        });
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Padrinos — Plan Padrino" />
+
+
+<div className="flex flex-col gap-4 rounded-xl p-4 md:p-6">
+    <h1 className="w-full text-center text-3xl font-black tracking-tight text-foreground">
+        Nuestros Padrinos
+    </h1>
+
+    {/* Búsqueda + botón en la misma fila */}
+    <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] sm:max-w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+                placeholder="Buscar por nombre, cédula o cargo..."
+                value={searchPadrino}
+                onChange={(e) => setSearchPadrino(e.target.value)}
+                className="pl-9 text-sm"
+            />
+        </div>
+        {canManage && !modoSeleccion && (
+            <Button
+                onClick={handleIniciarSeleccion}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-semibold shadow-xs shrink-0"
+            >
+                <Plus className="h-4 w-4" />
+                Crear Apadrinamiento
+            </Button>
+        )}
+    </div>
+
+                {/* BANNER DE MODO SELECCIÓN DIRECTA */}
+                {modoSeleccion && (
+                    <div className="rounded-2xl border border-emerald-400/60 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-sky-500/10 p-5 shadow-sm space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold shadow-xs shrink-0">
+                                    <Sparkles className="h-5 w-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                                        {pasoSeleccion === 1 ? (
+                                            <>Paso 1 de 2: Selecciona la tarjeta del Padrino Guía</>
+                                        ) : (
+                                            <>Paso 2 de 2: Selecciona la tarjeta del Apadrinado</>
+                                        )}
+                                    </span>
+
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                                {pasoSeleccion === 1 ? (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleCancelarSeleccion}
+                                            className="text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            disabled={!selectedPadrinoId}
+                                            onClick={() => setPasoSeleccion(2)}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 font-bold shadow-xs"
+                                        >
+                                            Siguiente
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setPasoSeleccion(1)}
+                                            className="text-xs gap-1 border-emerald-300"
+                                        >
+                                            <ArrowLeft className="h-3.5 w-3.5" />
+                                            Cambiar Padrino
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleCancelarSeleccion}
+                                            className="text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            disabled={!selectedApadrinadoId || savingSeleccion}
+                                            onClick={handleGuardarApadrinamiento}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 font-bold shadow-xs"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            {savingSeleccion ? 'Guardando...' : 'Guardar Apadrinamiento'}
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+
+                        {/* Estado de selección en el banner */}
+                        {pasoSeleccion === 2 && padrinoSeleccionadoObj && (
+                            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-emerald-200/60 text-xs">
+                                <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                                    ★ Padrino Guía: <strong className="text-foreground">{padrinoSeleccionadoObj.nombre_completo}</strong>
+                                </span>
+                                <span className="text-muted-foreground">➔</span>
+                                <span className="font-semibold text-sky-700 flex items-center gap-1">
+                                    Apadrinado: {selectedApadrinadoId ? (
+                                        <strong className="text-foreground">
+                                            {apadrinadosList.find((a) => a.id === selectedApadrinadoId)?.nombre_completo}
+                                        </strong>
+                                    ) : (
+                                        <em className="text-muted-foreground font-normal">(Selecciona una tarjeta abajo)</em>
+                                    )}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Pestañas */}
+                {/* PASO 1: GRID DE PADRINOS */}
+                {(!modoSeleccion || pasoSeleccion === 1) && (
+                    <div className="flex flex-col gap-3">
+                        {modoSeleccion && (
+                            <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                Haz clic en el CÍRCULO CON CHECK para elegir el Padrino Guía o en la TARJETA para inspeccionar sus datos:
+                            </span>
+                        )}
+                        {padrinosFiltrados.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-24 gap-4 text-muted-foreground">
+                                <Star className="h-16 w-16 opacity-20 text-green-500" />
+                                {searchPadrino.trim()
+                                    ? <p className="text-sm font-medium">No hay padrinos que coincidan con la búsqueda.</p>
+                                    : <><p className="text-sm font-medium">No hay colaboradores con rol de Padrino aún.</p><p className="text-xs">Asigna el rol desde la vista de Criterios.</p></>
+                                }
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                {padrinosFiltrados.map((p) => (
+                                    <MiniCard
+                                        key={p.id}
+                                        padrino={p}
+                                        onClick={() => setSelectedPadrinoModal(p)}
+                                        modoSeleccion={modoSeleccion}
+                                        isSelected={selectedPadrinoId === p.id}
+                                        onSelect={() => setSelectedPadrinoId(p.id)}
+                                        onDetalles={(e) => { e.stopPropagation(); setDetallePadrino(p); }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* PASO 2: GRID DE APADRINADOS */}
+                {modoSeleccion && pasoSeleccion === 2 && (
+                    <div className="flex flex-col gap-4 pt-2 border-t border-emerald-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <span className="text-xs font-bold text-sky-700 flex items-center gap-1.5">
+                                <UserPlus className="h-4 w-4" />
+                                Paso 2: Selecciona el Apadrinado con el CÍRCULO CON CHECK o haz clic en la TARJETA para ver su información:
+                            </span>
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar apadrinado..."
+                                    value={searchApadrinado}
+                                    onChange={(e) => setSearchApadrinado(e.target.value)}
+                                    className="pl-8 h-8 text-xs"
+                                />
+                            </div>
+                        </div>
+
+                        {apadrinadosFiltrados.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground text-sm bg-muted/20 rounded-xl border border-dashed">
+                                {searchApadrinado.trim()
+                                    ? 'No se encontraron colaboradores sin padrino asignado con ese criterio.'
+                                    : 'No hay colaboradores sin padrino asignado disponibles.'}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                {apadrinadosFiltrados.map((a) => (
+                                    <ApadrinadoMiniCard
+                                        key={a.id}
+                                        apadrinado={a}
+                                        onClick={() => setSelectedApadrinadoModal(a)}
+                                        isSelected={selectedApadrinadoId === a.id}
+                                        onSelect={() => setSelectedApadrinadoId(a.id)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+            </div>{/* fin contenedor principal */}
+
+            {/* MODAL DETALLES PADRINO */}
+            {detallePadrino && (
+                <DetallesPadrinoDialog
+                    padrino={detallePadrino}
+                    open={!!detallePadrino}
+                    onClose={() => setDetallePadrino(null)}
+                />
+            )}
+
+            {/* MODAL PADRINO CARNET */}
+            <Dialog open={!!selectedPadrinoModal} onOpenChange={(open) => { if (!open) setSelectedPadrinoModal(null); }}>
+                <DialogContent className="w-[60vw] max-w-3xl gap-0 overflow-hidden rounded-2xl border-0 bg-transparent p-0 shadow-2xl sm:max-w-3xl sm:rounded-2xl">
+                    <DialogTitle className="sr-only">Padrino {selectedPadrinoModal?.nombre_completo}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Tarjeta de presentación del padrino {selectedPadrinoModal?.nombre_completo}
+                    </DialogDescription>
+                    {selectedPadrinoModal && <PadrinoCard padrino={selectedPadrinoModal} canManage={canManage} />}
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL DETALLE APADRINADO */}
+            <Dialog open={!!selectedApadrinadoModal} onOpenChange={(open) => { if (!open) setSelectedApadrinadoModal(null); }}>
+                <DialogContent className="w-[85vw] max-w-2xl gap-0 overflow-hidden rounded-2xl border-0 bg-transparent p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl">
+                    <DialogTitle className="sr-only">Apadrinado {selectedApadrinadoModal?.nombre_completo}</DialogTitle>
+                    <DialogDescription className="sr-only">Tarjeta del apadrinado {selectedApadrinadoModal?.nombre_completo}</DialogDescription>
+                    {selectedApadrinadoModal && (
+                        <ApadrinadoCard apadrinado={selectedApadrinadoModal} />
+                    )}
+                </DialogContent>
+            </Dialog>
+        </AppLayout>
+    );
+}

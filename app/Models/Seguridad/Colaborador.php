@@ -122,6 +122,9 @@ class Colaborador extends Model
         // Paso 4 — plan padrino (toggle; el archivo vive en colaborador_documentos)
         'es_padrino',
         'tipo_padrino',
+        'padrino_id',
+        'mensaje_padrino',
+        'nivel_autonomia',
     ];
 
     protected function casts(): array
@@ -199,6 +202,21 @@ class Colaborador extends Model
     public function pruebasPeriodo(): HasMany
     {
         return $this->hasMany(ColaboradorPruebaPeriodo::class);
+    }
+
+    public function padrinoCriterio(): HasOne
+    {
+        return $this->hasOne(\App\Models\Gente\ColaboradorPadrinoCriterio::class);
+    }
+
+    public function padrino(): BelongsTo
+    {
+        return $this->belongsTo(Colaborador::class, 'padrino_id');
+    }
+
+    public function apadrinados(): HasMany
+    {
+        return $this->hasMany(Colaborador::class, 'padrino_id');
     }
 
     public function acisReportados(): HasMany
