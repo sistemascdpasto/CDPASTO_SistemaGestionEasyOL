@@ -5,6 +5,7 @@ namespace Tests\Feature\Seguridad;
 use App\Exports\Seguridad\PruebasExport;
 use App\Models\Seguridad\Alcoholimetro;
 use App\Models\Seguridad\Colaborador;
+use App\Models\Seguridad\PersonaExterna;
 use App\Models\Seguridad\PruebaAlcoholemia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -332,12 +333,13 @@ class PruebaAlcoholemiaTest extends TestCase
         $export = new PruebasExport(collect([$prueba]));
 
         $this->assertSame(
-            ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'],
+            ['Fecha', 'Tipo de persona', 'Nombre', 'Documento', 'Empresa', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'],
             $export->headings()
         );
 
         $fila = $export->map($prueba);
-        $this->assertCount(12, $fila);
+        $this->assertCount(14, $fila);
+        $this->assertSame('Colaborador', $fila[1]);
         $this->assertSame('', end($fila));
     }
 
@@ -382,5 +384,138 @@ class PruebaAlcoholemiaTest extends TestCase
 
         $prueba->refresh();
         $this->assertSame('2026-09-18 14:45:00', $prueba->fecha_hora->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function datosExterno(Alcoholimetro $dispositivo, array $overrides = []): array
+    {
+        return [
+            'tipo_persona' => 'externo',
+            'externo_documento' => '80 123 456',
+            'externo_nombres' => 'Luis',
+            'externo_apellidos' => 'Pérez',
+            'externo_empresa' => 'Montajes del Sur SAS',
+            'externo_tipo_vinculo' => 'contratista',
+            'tipo' => 'ingreso',
+            'alcoholimetro_id' => $dispositivo->id,
+            'resultado' => '0.000',
+            'consentimiento_aceptado' => true,
+            ...$overrides,
+        ];
+    }
+
+    public function test_it_registers_a_prueba_for_a_contratista_without_turno(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+
+        $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo));
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('seguridad.pruebas.index'));
+
+        $persona = PersonaExterna::where('documento', '80123456')->firstOrFail();
+        $this->assertSame('Montajes del Sur SAS', $persona->empresa);
+
+        $prueba = PruebaAlcoholemia::firstOrFail();
+        $this->assertNull($prueba->colaborador_id);
+        $this->assertSame($persona->id, $prueba->persona_externa_id);
+        $this->assertNull($prueba->turno);
+        $this->assertSame('Luis Pérez', $prueba->evaluadoNombre());
+        $this->assertSame('Apto', $prueba->evaluacion());
+    }
+
+    public function test_it_reuses_the_persona_externa_by_documento_and_updates_its_data(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo));
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo, [
+            'tipo' => 'salida',
+            'externo_empresa' => 'Montajes del Sur S.A.S.',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(1, PersonaExterna::count());
+        $this->assertSame('Montajes del Sur S.A.S.', PersonaExterna::first()->empresa);
+        $this->assertSame(2, PruebaAlcoholemia::where('persona_externa_id', PersonaExterna::first()->id)->count());
+    }
+
+    public function test_it_requires_the_externo_data_when_tipo_persona_is_externo(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+
+        $response = $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo, [
+            'externo_documento' => '',
+            'externo_nombres' => '',
+            'externo_empresa' => '',
+        ]));
+
+        $response->assertSessionHasErrors(['externo_documento', 'externo_nombres', 'externo_empresa']);
+        $response->assertSessionDoesntHaveErrors(['colaborador_id', 'turno']);
+    }
+
+    public function test_it_blocks_a_second_prueba_of_the_same_tipo_for_the_same_externo_within_the_interval(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo))->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo))
+            ->assertSessionHasErrors('tipo');
+    }
+
+    public function test_index_filters_by_tipo_persona_and_searches_by_empresa(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+        $colaborador = $this->colaborador();
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo));
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), [
+            'colaborador_id' => $colaborador->id,
+            'tipo' => 'ingreso',
+            'turno' => 'A',
+            'alcoholimetro_id' => $dispositivo->id,
+            'resultado' => '0.000',
+            'consentimiento_aceptado' => true,
+        ]);
+
+        $this->actingAs($user)->get(route('seguridad.pruebas.index', ['tipo_persona' => 'externo']))
+            ->assertInertia(fn ($page) => $page
+                ->has('pruebas.data', 1)
+                ->where('pruebas.data.0.persona_externa.empresa', 'Montajes del Sur SAS'));
+
+        $this->actingAs($user)->get(route('seguridad.pruebas.index', ['tipo_persona' => 'colaborador']))
+            ->assertInertia(fn ($page) => $page->has('pruebas.data', 1)->where('pruebas.data.0.colaborador_id', $colaborador->id));
+
+        $this->actingAs($user)->get(route('seguridad.pruebas.index', ['colaborador' => 'Montajes']))
+            ->assertInertia(fn ($page) => $page->has('pruebas.data', 1));
+    }
+
+    public function test_a_positive_externo_generates_an_alerta_and_exports_render(): void
+    {
+        $user = $this->seguridadUser();
+        $dispositivo = $this->alcoholimetro();
+
+        $this->actingAs($user)->post(route('seguridad.pruebas.store'), $this->datosExterno($dispositivo, ['resultado' => '0.500']))
+            ->assertSessionHasNoErrors();
+
+        $prueba = PruebaAlcoholemia::with('personaExterna')->firstOrFail();
+        $this->assertSame('No Apto', $prueba->evaluacion());
+        $this->assertDatabaseHas('alertas', ['prueba_alcoholemia_id' => $prueba->id, 'tipo' => 'prueba_positiva', 'colaborador_id' => null]);
+
+        $fila = (new PruebasExport(collect([$prueba])))->map($prueba);
+        $this->assertSame(['Externo', 'Luis Pérez', '80123456', 'Montajes del Sur SAS'], array_slice($fila, 1, 4));
+
+        $this->actingAs($user)->get(route('seguridad.pruebas.exportar-pdf'))->assertOk();
+        $this->actingAs($user)->get(route('seguridad.pruebas.show', $prueba))->assertOk();
+        $this->actingAs($user)->get(route('seguridad.pruebas.edit', $prueba))
+            ->assertInertia(fn ($page) => $page->where('prueba.persona_externa.documento', '80123456'));
     }
 }

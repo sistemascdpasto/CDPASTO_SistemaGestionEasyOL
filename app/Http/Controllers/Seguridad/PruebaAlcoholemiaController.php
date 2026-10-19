@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Seguridad\StorePruebaAlcoholemiaRequest;
 use App\Models\Seguridad\Alcoholimetro;
 use App\Models\Seguridad\Colaborador;
+use App\Models\Seguridad\PersonaExterna;
 use App\Models\Seguridad\PruebaAlcoholemia;
 use App\Services\Seguridad\QrCodeGenerator;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -65,6 +66,7 @@ class PruebaAlcoholemiaController extends Controller
                 ->where('is_active', true)
                 ->orderBy('nombres')
                 ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
+            ...$this->propsPersonasExternas(),
             'dispositivosDisponibles' => $dispositivosDisponibles,
             'dispositivoDefaultId'    => $dispositivoDefaultId,
         ]);
@@ -75,7 +77,7 @@ class PruebaAlcoholemiaController extends Controller
         $esProgramacion = $request->boolean('es_programacion');
 
         $prueba = PruebaAlcoholemia::create([
-            'colaborador_id' => $request->input('colaborador_id'),
+            ...$this->resolverPersonaEvaluada($request),
             'tipo' => $request->input('tipo'),
             'turno' => $request->input('turno'),
             'alcoholimetro_id' => $esProgramacion ? null : $request->input('alcoholimetro_id'),
@@ -120,7 +122,7 @@ class PruebaAlcoholemiaController extends Controller
             ->orderBy('codigo')
             ->get(['id', 'codigo', 'valor_min', 'valor_max']);
 
-        $pruebaData = $prueba->load(['colaborador', 'alcoholimetro', 'responsable'])->toArray();
+        $pruebaData = $prueba->load(['colaborador', 'personaExterna', 'alcoholimetro', 'responsable'])->toArray();
 
         // Formatear fecha_hora para input datetime-local
         if ($prueba->fecha_hora) {
@@ -139,6 +141,7 @@ class PruebaAlcoholemiaController extends Controller
                 ->where('is_active', true)
                 ->orderBy('nombres')
                 ->get(['id', 'nombres', 'apellidos', 'cedula', 'turno', 'cargo']),
+            ...$this->propsPersonasExternas(),
             'dispositivosDisponibles' => $dispositivosDisponibles,
             'prueba' => $pruebaData,
         ]);
@@ -149,7 +152,7 @@ class PruebaAlcoholemiaController extends Controller
         $esProgramacion = $request->boolean('es_programacion');
 
         $prueba->fill([
-            'colaborador_id' => $request->input('colaborador_id'),
+            ...$this->resolverPersonaEvaluada($request),
             'tipo' => $request->input('tipo'),
             'turno' => $request->input('turno'),
             'alcoholimetro_id' => $esProgramacion ? null : $request->input('alcoholimetro_id'),
@@ -205,7 +208,7 @@ class PruebaAlcoholemiaController extends Controller
 
     public function show(PruebaAlcoholemia $prueba, QrCodeGenerator $qrCodeGenerator): Response
     {
-        $prueba->load(['colaborador', 'alcoholimetro', 'responsable:id,name', 'evidencias']);
+        $prueba->load(['colaborador', 'personaExterna', 'alcoholimetro', 'responsable:id,name', 'evidencias']);
 
         $qrSvg = $prueba->qr_token
             ? $qrCodeGenerator->generateSvg(route('seguridad.verificacion', [$prueba->id, $prueba->qr_token]))
@@ -227,7 +230,7 @@ class PruebaAlcoholemiaController extends Controller
         $inicioMes = $mes !== '' ? Carbon::createFromFormat('Y-m', $mes)->startOfMonth() : Carbon::now()->startOfMonth();
 
         $pruebas = PruebaAlcoholemia::query()
-            ->with('colaborador:id,nombres,apellidos')
+            ->with(['colaborador:id,nombres,apellidos', 'personaExterna:id,nombres,apellidos'])
             ->where('estado', 'programada')
             ->whereBetween('programada_en', [$inicioMes->clone()->startOfDay(), $inicioMes->clone()->endOfMonth()->endOfDay()])
             ->orderBy('programada_en')
@@ -238,7 +241,7 @@ class PruebaAlcoholemiaController extends Controller
                 'hora' => $prueba->programada_en->format('H:i'),
                 'tipo' => $prueba->tipo,
                 'turno' => $prueba->turno,
-                'colaborador' => $prueba->colaborador?->nombre_completo,
+                'colaborador' => $prueba->evaluadoNombre(),
             ]));
 
         return Inertia::render('seguridad/pruebas/calendario', [
@@ -287,6 +290,66 @@ class PruebaAlcoholemiaController extends Controller
     }
 
     /**
+     * Igual que ultimaFirma(), para contratistas / personal externo.
+     * GET /modules/seguridad/pruebas/ultima-firma-externo/{personaExterna}
+     */
+    public function ultimaFirmaExterno(PersonaExterna $personaExterna): JsonResponse
+    {
+        $ultima = PruebaAlcoholemia::query()
+            ->where('persona_externa_id', $personaExterna->id)
+            ->whereNotNull('firma_path')
+            ->latest('fecha_hora')
+            ->first(['firma_path']);
+
+        return response()->json([
+            'firma_url' => $ultima ? '/storage/' . $ultima->firma_path : null,
+        ]);
+    }
+
+    /**
+     * Devuelve las columnas de la persona evaluada: el colaborador, o el
+     * externo identificado por documento (se crea la primera vez y se
+     * actualizan sus datos en registros posteriores).
+     *
+     * @return array{colaborador_id: int|null, persona_externa_id: int|null}
+     */
+    private function resolverPersonaEvaluada(StorePruebaAlcoholemiaRequest $request): array
+    {
+        if (! $request->esExterno()) {
+            return ['colaborador_id' => $request->input('colaborador_id'), 'persona_externa_id' => null];
+        }
+
+        $persona = PersonaExterna::updateOrCreate(
+            ['documento' => $request->input('externo_documento')],
+            [
+                'nombres' => $request->input('externo_nombres'),
+                'apellidos' => $request->input('externo_apellidos'),
+                'empresa' => $request->input('externo_empresa'),
+                'tipo_vinculo' => $request->input('externo_tipo_vinculo'),
+                'cargo' => $request->input('externo_cargo'),
+                'telefono' => $request->input('externo_telefono'),
+            ],
+        );
+
+        return ['colaborador_id' => null, 'persona_externa_id' => $persona->id];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function propsPersonasExternas(): array
+    {
+        return [
+            'personasExternas' => PersonaExterna::query()
+                ->orderBy('nombres')
+                ->get(['id', 'documento', 'nombres', 'apellidos', 'empresa', 'tipo_vinculo', 'cargo', 'telefono']),
+            'tiposVinculo' => collect(PersonaExterna::TIPOS_VINCULO)
+                ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
+                ->values(),
+        ];
+    }
+
+    /**
      * HU025: filtros compartidos por el listado y ambas exportaciones (HU026).
      */
     private function filtrarPruebas(Request $request): Builder
@@ -294,17 +357,28 @@ class PruebaAlcoholemiaController extends Controller
         $filtros = $this->filtrosDesdeRequest($request);
 
         return PruebaAlcoholemia::query()
-            ->with(['colaborador:id,nombres,apellidos,cedula', 'alcoholimetro:id,codigo', 'responsable:id,name', 'evidencias'])
+            ->with(['colaborador:id,nombres,apellidos,cedula', 'personaExterna', 'alcoholimetro:id,codigo', 'responsable:id,name', 'evidencias'])
+            ->when($filtros['tipo_persona'] === 'colaborador', fn ($query) => $query->whereNull('persona_externa_id'))
+            ->when($filtros['tipo_persona'] === 'externo', fn ($query) => $query->whereNotNull('persona_externa_id'))
             ->when($filtros['estado'] !== '', fn ($query) => $query->where('estado', $filtros['estado']))
             ->when($filtros['tipo'] !== '', fn ($query) => $query->where('tipo', $filtros['tipo']))
             ->when($filtros['turno'] !== '', fn ($query) => $query->where('turno', $filtros['turno']))
             ->when($filtros['fecha_desde'] !== '', fn ($query) => $query->whereDate('fecha_hora', '>=', $filtros['fecha_desde']))
             ->when($filtros['fecha_hasta'] !== '', fn ($query) => $query->whereDate('fecha_hora', '<=', $filtros['fecha_hasta']))
             ->when($filtros['colaborador'] !== '', function ($query) use ($filtros) {
-                $query->whereHas('colaborador', function ($query) use ($filtros) {
-                    $query->where('nombres', 'like', "%{$filtros['colaborador']}%")
-                        ->orWhere('apellidos', 'like', "%{$filtros['colaborador']}%")
-                        ->orWhere('cedula', 'like', "%{$filtros['colaborador']}%");
+                $termino = "%{$filtros['colaborador']}%";
+
+                $query->where(function ($query) use ($termino) {
+                    $query->whereHas('colaborador', function ($query) use ($termino) {
+                        $query->where('nombres', 'like', $termino)
+                            ->orWhere('apellidos', 'like', $termino)
+                            ->orWhere('cedula', 'like', $termino);
+                    })->orWhereHas('personaExterna', function ($query) use ($termino) {
+                        $query->where('nombres', 'like', $termino)
+                            ->orWhere('apellidos', 'like', $termino)
+                            ->orWhere('documento', 'like', $termino)
+                            ->orWhere('empresa', 'like', $termino);
+                    });
                 });
             });
     }
@@ -318,6 +392,7 @@ class PruebaAlcoholemiaController extends Controller
             'estado' => $request->string('estado')->trim()->toString(),
             'tipo' => $request->string('tipo')->trim()->toString(),
             'turno' => $request->string('turno')->trim()->toString(),
+            'tipo_persona' => $request->string('tipo_persona')->trim()->toString(),
             'fecha_desde' => $request->string('fecha_desde')->trim()->toString(),
             'fecha_hasta' => $request->string('fecha_hasta')->trim()->toString(),
             'colaborador' => $request->string('colaborador')->trim()->toString(),

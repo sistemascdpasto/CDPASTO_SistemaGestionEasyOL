@@ -16,7 +16,7 @@ class PruebaAlcoholemiaObserver
                 'colaborador_id' => $prueba->colaborador_id,
                 'alcoholimetro_id' => $prueba->alcoholimetro_id,
                 'prueba_alcoholemia_id' => $prueba->id,
-                'mensaje' => "{$prueba->colaborador->nombre_completo} registró un resultado positivo ({$prueba->resultado}) en la prueba de {$prueba->tipoLabel()}.",
+                'mensaje' => "{$this->etiquetaPersona($prueba)} registró un resultado positivo ({$prueba->resultado}) en la prueba de {$prueba->tipoLabel()}.",
             ]);
 
             AlertaNotifier::notificar($alerta);
@@ -30,10 +30,19 @@ class PruebaAlcoholemiaObserver
                 'colaborador_id' => $prueba->colaborador_id,
                 'alcoholimetro_id' => $prueba->alcoholimetro_id,
                 'prueba_alcoholemia_id' => $prueba->id,
-                'mensaje' => "{$prueba->colaborador->nombre_completo} fue evaluado como No Apto para laborar (prueba de {$prueba->tipoLabel()}).",
+                'mensaje' => "{$this->etiquetaPersona($prueba)} fue evaluado como No Apto para laborar (prueba de {$prueba->tipoLabel()}).",
             ]);
 
             AlertaNotifier::notificar($alerta);
         }
+    }
+
+    private function etiquetaPersona(PruebaAlcoholemia $prueba): string
+    {
+        if (! $prueba->esExterna()) {
+            return (string) $prueba->evaluadoNombre();
+        }
+
+        return "{$prueba->evaluadoNombre()} (externo · {$prueba->personaExterna?->empresa})";
     }
 }

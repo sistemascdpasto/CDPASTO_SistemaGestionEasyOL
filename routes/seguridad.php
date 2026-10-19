@@ -56,6 +56,7 @@ Route::middleware(['auth', 'active', 'role:Administrador|Seguridad', 'submodule.
         Route::get('pruebas/exportar/pdf', [PruebaAlcoholemiaController::class, 'exportarPdf'])->name('pruebas.exportar-pdf');
         Route::get('pruebas/exportar/excel', [PruebaAlcoholemiaController::class, 'exportarExcel'])->name('pruebas.exportar-excel');
         Route::get('pruebas/ultima-firma/{colaborador}', [PruebaAlcoholemiaController::class, 'ultimaFirma'])->name('pruebas.ultima-firma');
+        Route::get('pruebas/ultima-firma-externo/{personaExterna}', [PruebaAlcoholemiaController::class, 'ultimaFirmaExterno'])->name('pruebas.ultima-firma-externo');
         Route::resource('pruebas', PruebaAlcoholemiaController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
 
         Route::get('condiciones-salud', [CondicionSaludController::class, 'index'])->name('condiciones-salud.index');

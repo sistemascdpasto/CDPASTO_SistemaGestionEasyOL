@@ -27,8 +27,10 @@
         <thead>
             <tr>
                 <th>Fecha</th>
-                <th>Colaborador</th>
-                <th>Cédula</th>
+                <th>Persona</th>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Empresa</th>
                 <th>Tipo</th>
                 <th>Turno</th>
                 <th>Dispositivo</th>
@@ -48,8 +50,10 @@
                 @endphp
                 <tr>
                     <td>{{ $prueba->fecha_hora->format('d/m/Y H:i') }}</td>
-                    <td>{{ $prueba->colaborador?->nombre_completo }}</td>
-                    <td>{{ $prueba->colaborador?->cedula }}</td>
+                    <td>{{ $prueba->tipoPersonaLabel() }}</td>
+                    <td>{{ $prueba->evaluadoNombre() }}</td>
+                    <td>{{ $prueba->evaluadoDocumento() }}</td>
+                    <td>{{ $prueba->esExterna() ? $prueba->personaExterna?->empresa : 'EASY LOGÍSTICA' }}</td>
                     <td>{{ $prueba->tipoLabel() }}</td>
                     <td>{{ $prueba->turno ?? '—' }}</td>
                     <td>{{ $prueba->alcoholimetro?->codigo }}</td>

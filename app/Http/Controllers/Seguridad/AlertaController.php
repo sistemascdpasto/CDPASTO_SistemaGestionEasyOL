@@ -38,7 +38,7 @@ class AlertaController extends Controller
     public function bell(): JsonResponse
     {
         $alertas = Alerta::query()
-            ->with(['colaborador:id,nombres,apellidos,cedula', 'alcoholimetro:id,codigo'])
+            ->with(['colaborador:id,nombres,apellidos,cedula', 'alcoholimetro:id,codigo', 'pruebaAlcoholemia.personaExterna'])
             ->where('atendida', false)
             ->latest()
             ->limit(30)
@@ -51,8 +51,8 @@ class AlertaController extends Controller
             'created_at'  => $a->created_at?->diffForHumans(),
             'colaborador' => $a->colaborador
                 ? $a->colaborador->nombres . ' ' . $a->colaborador->apellidos
-                : null,
-            'cedula'      => $a->colaborador?->cedula,
+                : $a->pruebaAlcoholemia?->personaExterna?->nombre_completo,
+            'cedula'      => $a->colaborador?->cedula ?? $a->pruebaAlcoholemia?->personaExterna?->documento,
             'alcoholimetro' => $a->alcoholimetro?->codigo,
         ]);
 

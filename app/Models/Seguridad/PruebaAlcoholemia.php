@@ -15,6 +15,7 @@ class PruebaAlcoholemia extends Model
 
     protected $fillable = [
         'colaborador_id',
+        'persona_externa_id',
         'alcoholimetro_id',
         'tipo',
         'turno',
@@ -61,6 +62,39 @@ class PruebaAlcoholemia extends Model
         return $this->belongsTo(Colaborador::class);
     }
 
+    /**
+     * Contratista o personal externo evaluado. Cada prueba tiene exactamente
+     * uno de los dos: `colaborador_id` o `persona_externa_id`.
+     */
+    public function personaExterna(): BelongsTo
+    {
+        return $this->belongsTo(PersonaExterna::class);
+    }
+
+    public function esExterna(): bool
+    {
+        return $this->persona_externa_id !== null;
+    }
+
+    public function evaluadoNombre(): ?string
+    {
+        return $this->esExterna()
+            ? $this->personaExterna?->nombre_completo
+            : $this->colaborador?->nombre_completo;
+    }
+
+    public function evaluadoDocumento(): ?string
+    {
+        return $this->esExterna()
+            ? $this->personaExterna?->documento
+            : $this->colaborador?->cedula;
+    }
+
+    public function tipoPersonaLabel(): string
+    {
+        return $this->esExterna() ? 'Externo' : 'Colaborador';
+    }
+
     public function evidencias(): HasMany
     {
         return $this->hasMany(PruebaEvidencia::class);
@@ -77,15 +111,16 @@ class PruebaAlcoholemia extends Model
     }
 
     /**
-     * HU029: impide dos pruebas del mismo tipo para el mismo colaborador
-     * dentro de la ventana mínima configurada.
+     * HU029: impide dos pruebas del mismo tipo para la misma persona
+     * (colaborador o externo, según `$columna`) dentro de la ventana mínima
+     * configurada.
      */
-    public static function existeConflictoDeIntervalo(int $colaboradorId, string $tipo, Carbon $fechaHora, ?int $ignorarId = null): bool
+    public static function existeConflictoDeIntervalo(int $personaId, string $tipo, Carbon $fechaHora, ?int $ignorarId = null, string $columna = 'colaborador_id'): bool
     {
         $horas = (int) config('seguridad.intervalo_minimo_horas');
 
         return static::query()
-            ->where('colaborador_id', $colaboradorId)
+            ->where($columna, $personaId)
             ->where('tipo', $tipo)
             ->where('estado', '!=', 'cancelada')
             ->when($ignorarId, fn ($query) => $query->whereKeyNot($ignorarId))
@@ -127,6 +162,11 @@ class PruebaAlcoholemia extends Model
     {
         if ($this->es_positivo) {
             return 'No Apto';
+        }
+
+        // Los externos no registran condición de salud: solo cuenta el resultado.
+        if ($this->colaborador_id === null) {
+            return 'Apto';
         }
 
         $condicion = CondicionSalud::query()

@@ -32,6 +32,7 @@ interface PruebaRow {
     fecha_hora: string;
     firma_path: string | null;
     colaborador: { nombres: string; apellidos: string; cedula: string } | null;
+    persona_externa: { nombres: string; apellidos: string | null; documento: string; empresa: string } | null;
     alcoholimetro: { codigo: string } | null;
     responsable: { name: string } | null;
 }
@@ -51,6 +52,7 @@ interface Filters {
     estado: string;
     tipo: string;
     turno: string;
+    tipo_persona: string;
     fecha_desde: string;
     fecha_hasta: string;
     colaborador: string;
@@ -93,9 +95,9 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                     </div>
                 </div>
 
-                <form className="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-6">
+                <form className="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-7">
                     <div className="grid gap-1.5">
-                        <Label htmlFor="colaborador">Colaborador o cédula</Label>
+                        <Label htmlFor="colaborador">Nombre, documento o empresa</Label>
                         <Input
                             id="colaborador"
                             value={form.colaborador}
@@ -120,6 +122,22 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                             value={form.fecha_hasta}
                             onChange={(e) => setForm({ ...form, fecha_hasta: e.target.value })}
                         />
+                    </div>
+                    <div className="grid gap-1.5">
+                        <Label>Persona</Label>
+                        <Select
+                            value={form.tipo_persona || 'todos'}
+                            onValueChange={(value) => setForm({ ...form, tipo_persona: value === 'todos' ? '' : value })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="todos">Todas</SelectItem>
+                                <SelectItem value="colaborador">Colaboradores</SelectItem>
+                                <SelectItem value="externo">Contratistas / externos</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid gap-1.5">
                         <Label>Tipo</Label>
@@ -167,7 +185,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                         </Select>
                     </div>
 
-                    <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-6">
+                    <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-7">
                         <Button type="button" variant="outline" asChild>
                             <a href={exportUrl('seguridad.pruebas.exportar-pdf')}>
                                 <FileText className="size-4" />
@@ -188,7 +206,7 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
-                                <TableHead>Colaborador</TableHead>
+                                <TableHead>Persona evaluada</TableHead>
                                 <TableHead>Tipo</TableHead>
                                 <TableHead>Turno</TableHead>
                                 <TableHead>Dispositivo</TableHead>
@@ -210,7 +228,23 @@ export default function PruebasIndex({ pruebas, filters }: { pruebas: PruebasPag
                                 <TableRow key={prueba.id}>
                                     <TableCell>{new Date(prueba.fecha_hora).toLocaleString()}</TableCell>
                                     <TableCell>
-                                        {prueba.colaborador ? `${prueba.colaborador.nombres} ${prueba.colaborador.apellidos}` : '—'}
+                                        {prueba.persona_externa ? (
+                                            <div className="flex flex-col gap-0.5">
+                                                <span>
+                                                    {prueba.persona_externa.nombres} {prueba.persona_externa.apellidos ?? ''}
+                                                </span>
+                                                <span className="flex items-center gap-1.5">
+                                                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                                                        Externo
+                                                    </Badge>
+                                                    <span className="text-muted-foreground text-xs">{prueba.persona_externa.empresa}</span>
+                                                </span>
+                                            </div>
+                                        ) : prueba.colaborador ? (
+                                            `${prueba.colaborador.nombres} ${prueba.colaborador.apellidos}`
+                                        ) : (
+                                            '—'
+                                        )}
                                     </TableCell>
                                     <TableCell>{TIPO_LABELS[prueba.tipo] ?? prueba.tipo}</TableCell>
                                     <TableCell>{prueba.turno ?? '—'}</TableCell>

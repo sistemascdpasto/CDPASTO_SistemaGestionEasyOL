@@ -20,12 +20,10 @@ class RecordatorioPruebaProgramada extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $colaborador = $this->prueba->colaborador;
-
         return (new MailMessage)
             ->subject('EASY LOGÍSTICA Seguridad: recordatorio de prueba programada')
             ->greeting('Tienes una prueba de alcoholemia programada')
-            ->line("Colaborador: {$colaborador?->nombre_completo}")
+            ->line(($this->prueba->esExterna() ? 'Persona externa' : 'Colaborador').": {$this->prueba->evaluadoNombre()}")
             ->line("Tipo: {$this->prueba->tipoLabel()}")
             ->line('Programada para: '.$this->prueba->programada_en?->format('d/m/Y H:i'))
             ->action('Ver pruebas', route('seguridad.pruebas.index'))

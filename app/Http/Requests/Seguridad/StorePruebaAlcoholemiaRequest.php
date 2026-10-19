@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Seguridad;
 
 use App\Models\Seguridad\Alcoholimetro;
+use App\Models\Seguridad\PersonaExterna;
 use App\Models\Seguridad\PruebaAlcoholemia;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -17,6 +18,27 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
     }
 
     /**
+     * `tipo_persona` distingue colaboradores de contratistas/personal
+     * externo; los formularios anteriores no lo enviaban, así que por defecto
+     * se asume colaborador.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('tipo_persona')) {
+            $this->merge(['tipo_persona' => 'colaborador']);
+        }
+
+        if ($this->filled('externo_documento')) {
+            $this->merge(['externo_documento' => preg_replace('/\s+/', '', (string) $this->input('externo_documento'))]);
+        }
+    }
+
+    public function esExterno(): bool
+    {
+        return $this->input('tipo_persona') === 'externo';
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -24,10 +46,21 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
         $pruebaActual = $this->route('prueba');
         $alcoholimetroActualId = $pruebaActual?->alcoholimetro_id;
 
+        $esExterno = $this->esExterno();
+
         return [
-            'colaborador_id' => ['required', 'integer', Rule::exists('colaboradores', 'id')->whereNull('deleted_at')],
+            'tipo_persona' => ['required', Rule::in(['colaborador', 'externo'])],
+            'colaborador_id' => [Rule::requiredIf(! $esExterno), 'nullable', 'integer', Rule::exists('colaboradores', 'id')->whereNull('deleted_at')],
+            'externo_documento' => [Rule::requiredIf($esExterno), 'nullable', 'string', 'max:30'],
+            'externo_nombres' => [Rule::requiredIf($esExterno), 'nullable', 'string', 'max:255'],
+            'externo_apellidos' => ['nullable', 'string', 'max:255'],
+            'externo_empresa' => [Rule::requiredIf($esExterno), 'nullable', 'string', 'max:255'],
+            'externo_tipo_vinculo' => [Rule::requiredIf($esExterno), 'nullable', Rule::in(array_keys(PersonaExterna::TIPOS_VINCULO))],
+            'externo_cargo' => ['nullable', 'string', 'max:255'],
+            'externo_telefono' => ['nullable', 'string', 'max:30'],
             'tipo' => ['required', Rule::in(['ingreso', 'aleatoria', 'salida'])],
-            'turno' => ['required', Rule::in(['A', 'B', 'C'])],
+            // Los externos no siempre están asignados a un turno de operación.
+            'turno' => [Rule::requiredIf(! $esExterno), 'nullable', Rule::in(['A', 'B', 'C'])],
             'es_programacion' => ['boolean'],
             'programada_en' => [
                 'required_if:es_programacion,1', 'nullable', 'date',
@@ -74,6 +107,22 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'externo_documento' => 'documento',
+            'externo_nombres' => 'nombres',
+            'externo_apellidos' => 'apellidos',
+            'externo_empresa' => 'empresa',
+            'externo_tipo_vinculo' => 'tipo de vínculo',
+            'externo_cargo' => 'cargo',
+            'externo_telefono' => 'teléfono',
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
@@ -100,11 +149,16 @@ class StorePruebaAlcoholemiaRequest extends FormRequest
             $horas = (int) config('seguridad.intervalo_minimo_horas');
             $ignorarId = $this->route('prueba')?->id;
 
-            if (PruebaAlcoholemia::existeConflictoDeIntervalo((int) $this->input('colaborador_id'), $this->input('tipo'), $fechaHora, $ignorarId)) {
+            [$columna, $personaId] = $this->esExterno()
+                ? ['persona_externa_id', PersonaExterna::where('documento', $this->input('externo_documento'))->value('id')]
+                : ['colaborador_id', $this->input('colaborador_id')];
+
+            if ($personaId && PruebaAlcoholemia::existeConflictoDeIntervalo((int) $personaId, $this->input('tipo'), $fechaHora, $ignorarId, $columna)) {
                 $tipoLabel = (new PruebaAlcoholemia(['tipo' => $this->input('tipo')]))->tipoLabel();
+                $quien = $this->esExterno() ? 'Esta persona' : 'Este colaborador';
                 $validator->errors()->add(
                     'tipo',
-                    "Este colaborador ya tiene una prueba de tipo \"{$tipoLabel}\" registrada en las últimas {$horas} horas."
+                    "{$quien} ya tiene una prueba de tipo \"{$tipoLabel}\" registrada en las últimas {$horas} horas."
                 );
             }
         });

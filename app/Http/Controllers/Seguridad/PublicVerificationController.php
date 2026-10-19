@@ -18,11 +18,11 @@ class PublicVerificationController extends Controller
     {
         abort_unless($prueba->qr_token && hash_equals($prueba->qr_token, $token), 404);
 
-        $prueba->load('colaborador:id,nombres,apellidos');
+        $prueba->load(['colaborador:id,nombres,apellidos', 'personaExterna:id,nombres,apellidos']);
 
         return Inertia::render('seguridad/verificacion', [
             'registro' => [
-                'colaborador' => $prueba->colaborador?->nombre_completo,
+                'colaborador' => $prueba->evaluadoNombre(),
                 'tipo' => $prueba->tipo,
                 'fecha' => $prueba->fecha_hora->format('d/m/Y H:i'),
                 'evaluacion' => $prueba->estado === 'programada' ? null : $prueba->evaluacion(),

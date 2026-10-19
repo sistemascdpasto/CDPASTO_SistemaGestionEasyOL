@@ -26,7 +26,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
 
     public function headings(): array
     {
-        return ['Fecha', 'Colaborador', 'Cédula', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'];
+        return ['Fecha', 'Tipo de persona', 'Nombre', 'Documento', 'Empresa', 'Tipo', 'Turno', 'Dispositivo', 'Resultado', 'Evaluación', 'Estado', 'Responsable', 'Firma', 'Evidencia principal'];
     }
 
     /**
@@ -36,8 +36,10 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
     {
         return [
             $prueba->fecha_hora ? $prueba->fecha_hora->format('d/m/Y H:i') : '—',
-            $prueba->colaborador?->nombre_completo ?? '—',
-            $prueba->colaborador?->cedula ?? '—',
+            $prueba->tipoPersonaLabel(),
+            $prueba->evaluadoNombre() ?? '—',
+            $prueba->evaluadoDocumento() ?? '—',
+            $prueba->esExterna() ? ($prueba->personaExterna?->empresa ?? '—') : 'EASY LOGÍSTICA',
             $prueba->tipoLabel(),
             $prueba->turno ?? '—',
             $prueba->alcoholimetro?->codigo ?? '—',
@@ -52,7 +54,7 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
 
     public function columnWidths(): array
     {
-        return ['K' => 18, 'L' => 18];
+        return ['M' => 18, 'N' => 18];
     }
 
     /**
@@ -65,8 +67,8 @@ class PruebasExport implements FromCollection, WithColumnWidths, WithDrawings, W
         foreach ($this->pruebas->values() as $index => $prueba) {
             $fila = $index + 2;
 
-            $this->agregarDrawing($drawings, $prueba->firma_path, "K{$fila}", 'Firma');
-            $this->agregarDrawing($drawings, $prueba->evidenciaPrincipalPath(), "L{$fila}", 'Evidencia principal');
+            $this->agregarDrawing($drawings, $prueba->firma_path, "M{$fila}", 'Firma');
+            $this->agregarDrawing($drawings, $prueba->evidenciaPrincipalPath(), "N{$fila}", 'Evidencia principal');
         }
 
         return $drawings;

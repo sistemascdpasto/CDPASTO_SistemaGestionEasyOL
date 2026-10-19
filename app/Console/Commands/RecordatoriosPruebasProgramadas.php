@@ -19,7 +19,7 @@ class RecordatoriosPruebasProgramadas extends Command
     public function handle(): int
     {
         $pruebas = PruebaAlcoholemia::query()
-            ->with(['responsable', 'colaborador'])
+            ->with(['responsable', 'colaborador', 'personaExterna'])
             ->where('estado', 'programada')
             ->whereNull('recordatorio_enviado_at')
             ->where('programada_en', '<=', Carbon::now()->addHour())

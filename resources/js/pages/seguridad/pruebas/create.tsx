@@ -17,10 +17,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/app-layout';
 import { SeccionCard } from '@/pages/seguridad/colaboradores/colaborador-form-fields';
 import { ColaboradorSearchSelect, type ColaboradorOption } from '@/pages/seguridad/pruebas/colaborador-search-select';
+import {
+    PersonaExternaFields,
+    personaExternaVacia,
+    valoresDesdePersona,
+    type PersonaExternaOption,
+    type PersonaExternaValues,
+    type TipoVinculoOption,
+} from '@/pages/seguridad/pruebas/persona-externa-fields';
 import { FirmaPad, type FirmaPadHandle } from '@/components/firma-pad';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
-import { CalendarClock, Camera, ChevronDown, Gauge, LoaderCircle, Paperclip, PenTool, ShieldCheck, Users, X } from 'lucide-react';
+import { Building2, CalendarClock, Camera, ChevronDown, Gauge, LoaderCircle, Paperclip, PenTool, ShieldCheck, UserRound, Users, X } from 'lucide-react';
 import { FormEventHandler, useEffect, useRef, useState } from 'react';
 
 const breadcrumbsBase: BreadcrumbItem[] = [
@@ -38,7 +46,8 @@ interface DispositivoOption {
 
 interface PruebaData {
     id: number;
-    colaborador_id: number;
+    colaborador_id: number | null;
+    persona_externa_id: number | null;
     tipo: string;
     turno: string | null;
     es_programacion: boolean;
@@ -53,10 +62,14 @@ interface PruebaData {
     observaciones: string | null;
     estado: string;
     colaborador: { id: number; nombres: string; apellidos: string; cedula: string } | null;
+    persona_externa: PersonaExternaOption | null;
     alcoholimetro: { id: number; codigo: string; valor_min: string; valor_max: string } | null;
 }
 
-interface PruebaForm {
+type TipoPersona = 'colaborador' | 'externo';
+
+interface PruebaForm extends PersonaExternaValues {
+    tipo_persona: TipoPersona;
     colaborador_id: string;
     tipo: string;
     turno: string;
@@ -379,11 +392,15 @@ function EvidenciaAdicionalPlegada({
 
 export default function CreatePrueba({
     colaboradores,
+    personasExternas,
+    tiposVinculo,
     dispositivosDisponibles,
     prueba,
     dispositivoDefaultId,
 }: {
     colaboradores: ColaboradorOption[];
+    personasExternas: PersonaExternaOption[];
+    tiposVinculo: TipoVinculoOption[];
     dispositivosDisponibles: DispositivoOption[];
     prueba?: PruebaData;
     dispositivoDefaultId?: number | null;
@@ -401,6 +418,8 @@ export default function CreatePrueba({
     };
 
     const { data, setData, post, processing, errors, transform } = useForm<PruebaForm>({
+        tipo_persona: prueba?.persona_externa_id ? 'externo' : 'colaborador',
+        ...(prueba?.persona_externa ? valoresDesdePersona(prueba.persona_externa) : personaExternaVacia),
         colaborador_id: prueba?.colaborador_id ? String(prueba.colaborador_id) : '',
         tipo: prueba?.tipo ?? 'ingreso',
         turno: prueba?.turno ?? '',
@@ -416,20 +435,31 @@ export default function CreatePrueba({
         observaciones: prueba?.observaciones ?? '',
     });
 
+    const esExterno = data.tipo_persona === 'externo';
     const colaboradorSeleccionado = colaboradores.find((c) => String(c.id) === data.colaborador_id);
+    const externoExistente = personasExternas.find((p) => p.documento === data.externo_documento.trim());
 
     const firmaPadRef = useRef<FirmaPadHandle>(null);
 
-    // Precarga la última firma registrada al seleccionar un colaborador
+    const seleccionarExterno = (persona: PersonaExternaOption | null) => {
+        setData((prev) => ({ ...prev, ...(persona ? valoresDesdePersona(persona) : personaExternaVacia) }));
+    };
+
+    // Precarga la última firma registrada al seleccionar un colaborador o un
+    // externo ya registrado.
     useEffect(() => {
-        if (!data.colaborador_id) {
+        const url = esExterno
+            ? externoExistente && route('seguridad.pruebas.ultima-firma-externo', { personaExterna: externoExistente.id })
+            : data.colaborador_id && route('seguridad.pruebas.ultima-firma', { colaborador: data.colaborador_id });
+
+        if (!url) {
             firmaPadRef.current?.clear();
             return;
         }
         // En modo edición no sobreescribimos la firma existente
         if (prueba) return;
 
-        fetch(route('seguridad.pruebas.ultima-firma', { colaborador: data.colaborador_id }))
+        fetch(url)
             .then((res) => res.json())
             .then((json: { firma_url: string | null }) => {
                 if (json.firma_url) {
@@ -439,7 +469,7 @@ export default function CreatePrueba({
                 }
             })
             .catch(() => { /* ignorar errores de red */ });
-    }, [data.colaborador_id]);
+    }, [esExterno, data.colaborador_id, externoExistente?.id]);
     const evidenciaInputRef = useRef<HTMLInputElement>(null);
     const evidenciasInputRef = useRef<HTMLInputElement>(null);
     // Rutas guardadas en el servidor; nunca se mutan localmente, solo se marcan para borrar.
@@ -586,7 +616,7 @@ export default function CreatePrueba({
                         description={
                             prueba
                                 ? 'Modifica los datos de la prueba y guarda los cambios.'
-                                : 'Selecciona al colaborador y completa los datos de la prueba.'
+                                : 'Selecciona al colaborador o contratista / personal externo y completa los datos de la prueba.'
                         }
                     />
                     <div className="flex items-center gap-2 pt-1">
@@ -602,16 +632,66 @@ export default function CreatePrueba({
                 </div>
 
                 <form onSubmit={submit} className="grid gap-6">
-                    <SeccionCard icon={Users} titulo="Colaborador y tipo de prueba" tono="verde">
+                    <SeccionCard icon={Users} titulo="Persona evaluada y tipo de prueba" tono="verde">
+                        <div className="mb-4 grid gap-2">
+                            <Label>Tipo de persona</Label>
+                            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Tipo de persona">
+                                {(
+                                    [
+                                        { value: 'colaborador', label: 'Colaborador EASY', descripcion: 'Personal propio con hoja de vida', icon: UserRound },
+                                        { value: 'externo', label: 'Contratista / personal externo', descripcion: 'Contratistas, visitantes, proveedores', icon: Building2 },
+                                    ] as const
+                                ).map((opcion) => {
+                                    const activo = data.tipo_persona === opcion.value;
+                                    return (
+                                        <button
+                                            key={opcion.value}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={activo}
+                                            onClick={() => setData('tipo_persona', opcion.value)}
+                                            className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
+                                                activo
+                                                    ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 dark:bg-emerald-500/10'
+                                                    : 'border-border bg-background hover:border-emerald-300'
+                                            }`}
+                                        >
+                                            <opcion.icon className={`size-5 shrink-0 ${activo ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                                            <span>
+                                                <span className="text-foreground block text-sm font-medium">{opcion.label}</span>
+                                                <span className="text-muted-foreground block text-xs">{opcion.descripcion}</span>
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <InputError message={errors.tipo_persona} />
+                        </div>
+
+                        {esExterno && (
+                            <div className="mb-4">
+                                <PersonaExternaFields
+                                    personasExternas={personasExternas}
+                                    tiposVinculo={tiposVinculo}
+                                    values={data}
+                                    onChange={(campo, valor) => setData(campo, valor)}
+                                    onSeleccionarExistente={seleccionarExterno}
+                                    errors={errors}
+                                />
+                            </div>
+                        )}
+
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <ColaboradorSearchSelect
-                                id="colaborador_search"
-                                label="Colaborador"
-                                colaboradores={colaboradores}
-                                selectedId={data.colaborador_id}
-                                onSelect={(colaborador) => setData('colaborador_id', colaborador ? String(colaborador.id) : '')}
-                                error={errors.colaborador_id}
-                            />
+                            {!esExterno && (
+                                <ColaboradorSearchSelect
+                                    id="colaborador_search"
+                                    label="Colaborador"
+                                    colaboradores={colaboradores}
+                                    selectedId={data.colaborador_id}
+                                    onSelect={(colaborador) => setData('colaborador_id', colaborador ? String(colaborador.id) : '')}
+                                    error={errors.colaborador_id}
+                                />
+                            )}
 
                             <div className="grid gap-2">
                                 <Label htmlFor="tipo">Tipo de prueba</Label>
@@ -629,7 +709,7 @@ export default function CreatePrueba({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="turno">Turno</Label>
+                                <Label htmlFor="turno">Turno{esExterno ? ' (opcional)' : ''}</Label>
                                 <Select value={data.turno} onValueChange={(value) => setData('turno', value)}>
                                     <SelectTrigger id="turno">
                                         <SelectValue placeholder="Selecciona el turno" />
@@ -644,7 +724,7 @@ export default function CreatePrueba({
                             </div>
                         </div>
 
-                        {colaboradorSeleccionado && (
+                        {!esExterno && colaboradorSeleccionado && (
                             <div className="mt-4 grid gap-3 rounded-lg border border-emerald-200 bg-white/60 p-3 text-sm sm:grid-cols-4 dark:border-emerald-500/20 dark:bg-black/10">
                                 <div>
                                     <p className="text-muted-foreground text-[11px] tracking-wide uppercase">Identificación</p>
@@ -771,11 +851,11 @@ export default function CreatePrueba({
                                     errorObservaciones={errors.observaciones}
                                 />
 
-                            <SeccionCard icon={PenTool} titulo="Firma del colaborador" tono="azul">
+                            <SeccionCard icon={PenTool} titulo={esExterno ? 'Firma de la persona evaluada' : 'Firma del colaborador'} tono="azul">
                                 <div className="flex justify-center">
                                     <FirmaPad
                                         ref={firmaPadRef}
-                                        label="Firma del colaborador (se precarga la última registrada)"
+                                        label={`Firma ${esExterno ? 'de la persona evaluada' : 'del colaborador'} (se precarga la última registrada)`}
                                         helpText="Dibuja la firma con el dedo o el mouse."
                                     />
                                 </div>

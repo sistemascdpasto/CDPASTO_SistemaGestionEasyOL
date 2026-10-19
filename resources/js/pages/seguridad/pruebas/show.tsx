@@ -23,6 +23,15 @@ interface PruebaDetalle {
     observaciones: string | null;
     fecha_hora: string;
     colaborador: { nombres: string; apellidos: string; cedula: string } | null;
+    persona_externa: {
+        nombres: string;
+        apellidos: string | null;
+        documento: string;
+        empresa: string;
+        tipo_vinculo_label: string;
+        cargo: string | null;
+        telefono: string | null;
+    } | null;
     alcoholimetro: { codigo: string } | null;
     responsable: { name: string } | null;
     evidencias: { id: number; path: string }[];
@@ -157,12 +166,19 @@ export default function PruebaShow({
                 <div className="flex flex-wrap items-center gap-3">
                     <HeadingSmall
                         title={
-                            prueba.colaborador
-                                ? `${prueba.colaborador.nombres} ${prueba.colaborador.apellidos}`
-                                : `Prueba #${prueba.id}`
+                            prueba.persona_externa
+                                ? `${prueba.persona_externa.nombres} ${prueba.persona_externa.apellidos ?? ''}`.trim()
+                                : prueba.colaborador
+                                  ? `${prueba.colaborador.nombres} ${prueba.colaborador.apellidos}`
+                                  : `Prueba #${prueba.id}`
                         }
                         description={`${fechaHora.toLocaleString('es-CO')} · ${TIPO_LABELS[prueba.tipo] ?? prueba.tipo}`}
                     />
+                    {prueba.persona_externa && (
+                        <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                            Externo · {prueba.persona_externa.tipo_vinculo_label}
+                        </Badge>
+                    )}
                     {prueba.estado === 'programada' ? (
                         <Badge variant="secondary">Programada</Badge>
                     ) : (
@@ -176,7 +192,16 @@ export default function PruebaShow({
                 <div className="grid gap-6 lg:grid-cols-3">
                     <Card className="border-sidebar-border/70 lg:col-span-2 dark:border-sidebar-border">
                         <CardContent className="grid gap-3 p-6 text-sm sm:grid-cols-2">
-                            <p>Cédula: {prueba.colaborador?.cedula ?? '—'}</p>
+                            {prueba.persona_externa ? (
+                                <>
+                                    <p>Documento: {prueba.persona_externa.documento}</p>
+                                    <p>Empresa: {prueba.persona_externa.empresa}</p>
+                                    {prueba.persona_externa.cargo && <p>Cargo / labor: {prueba.persona_externa.cargo}</p>}
+                                    {prueba.persona_externa.telefono && <p>Teléfono: {prueba.persona_externa.telefono}</p>}
+                                </>
+                            ) : (
+                                <p>Cédula: {prueba.colaborador?.cedula ?? '—'}</p>
+                            )}
                             <p>Turno: {prueba.turno ? `Turno ${prueba.turno}` : '—'}</p>
                             <p>Dispositivo: {prueba.alcoholimetro?.codigo ?? '—'}</p>
                             <p>Resultado: {prueba.resultado ?? '—'}</p>
@@ -213,7 +238,7 @@ export default function PruebaShow({
                 {/* Firma */}
                 {prueba.firma_path && (
                     <div className="max-w-xs">
-                        <h2 className="mb-2 text-lg font-medium tracking-tight">Firma del colaborador</h2>
+                        <h2 className="mb-2 text-lg font-medium tracking-tight">{prueba.persona_externa ? 'Firma de la persona evaluada' : 'Firma del colaborador'}</h2>
                         <SafeImage
                             src={`/storage/${prueba.firma_path}`}
                             alt="Firma del colaborador"
