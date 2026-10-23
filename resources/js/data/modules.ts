@@ -210,7 +210,8 @@ export const colaboradoresReadOnlySubmodule: SubModuleDef = {
     slug: 'colaboradores',
     icon: UserCheck,
     moduleSlugOverride: 'gente',
-    shared: true,
+    // No es `shared`: está en el catálogo (gente/colaboradores), así que respeta la
+    // personalización por usuario — si no se le otorga, el botón no aparece.
 };
 
 /**
@@ -237,7 +238,7 @@ export const geovictoriaAsistenciaReadOnlySubmodule: SubModuleDef = {
     slug: 'asistencia-geovictoria',
     icon: Clock,
     moduleSlugOverride: 'gente',
-    shared: true,
+    // Igual que Colaboradores: respeta la personalización (gente/asistencia-geovictoria).
 };
 
 export function findModule(moduleSlug: string): ModuleDef | undefined {
@@ -291,6 +292,20 @@ export function isSubmoduleAccessible(
  */
 export function submoduleHref(mod: ModuleDef, sub: SubModuleDef): string {
     return sub.href ?? (sub.slug ? `/modules/${sub.moduleSlugOverride ?? mod.slug}/${sub.slug}` : `/modules/${mod.slug}`);
+}
+
+/**
+ * ¿Tiene el usuario al menos un submódulo propio visible en este pilar? Si un
+ * usuario personalizado no tiene ninguno, el pilar no se muestra (ni en el
+ * sidebar ni en el dashboard) aunque su rol lo incluya.
+ */
+export function moduleHasAccessibleSubmodules(
+    mod: ModuleDef,
+    userRoles: string[],
+    isAdmin: boolean,
+    accessibleSubmodules: Record<string, string[]> = {},
+): boolean {
+    return isAdmin || buildModuleSections(mod, userRoles, isAdmin, accessibleSubmodules).length > 0;
 }
 
 /** Sección de la vista de un módulo: un grupo de submódulos afines con su encabezado. */

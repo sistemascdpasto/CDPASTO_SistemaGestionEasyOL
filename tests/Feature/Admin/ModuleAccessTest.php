@@ -161,4 +161,19 @@ class ModuleAccessTest extends TestCase
         $this->assertCount(9, $registro['gente']);
         $this->assertCount(4, $registro['flota']);
     }
+
+    public function test_colaboradores_no_aparece_ni_se_abre_si_no_se_otorga(): void
+    {
+        // Seguridad personalizado solo con Pruebas de Alcoholemia: sin Colaboradores.
+        $seguridad = $this->usuario('Seguridad');
+        $seguridad->update(['modulos_personalizados' => true]);
+        UserSubmoduleAccess::create(['user_id' => $seguridad->id, 'module_slug' => 'seguridad', 'submodule_key' => 'pruebas']);
+
+        $this->assertSame(['seguridad' => ['pruebas']], ModuleAccessRegistry::accessibleSubmodules($seguridad->fresh()));
+        $this->actingAs($seguridad)->get(route('gente.colaboradores.index'))->assertForbidden();
+
+        // El sidebar recibe solo eso, así que el botón de Colaboradores no se dibuja.
+        $this->actingAs($seguridad)->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page->where('auth.accessibleSubmodules', ['seguridad' => ['pruebas']]));
+    }
 }
