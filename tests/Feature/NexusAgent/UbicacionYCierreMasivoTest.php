@@ -3,6 +3,7 @@
 namespace Tests\Feature\NexusAgent;
 
 use App\Models\User;
+use Cdpasto\NexusAgent\Location;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -19,6 +20,7 @@ class UbicacionYCierreMasivoTest extends TestCase
     {
         parent::setUp();
 
+        Location::flushPolicy();
         Http::fake(); // geocodificación y envíos a Nexus
         config(['nexus_agent.location.required' => true, 'nexus_agent.key' => 'clave-de-prueba']);
     }
@@ -73,6 +75,45 @@ class UbicacionYCierreMasivoTest extends TestCase
         config(['nexus_agent.location.required' => false]);
 
         $this->actingAs(User::factory()->create())->get('/dashboard')->assertDontSee('Activa tu ubicación para continuar');
+    }
+
+    public function test_nexus_puede_desactivar_y_reactivar_la_ubicacion_obligatoria()
+    {
+        $user = User::factory()->create();
+
+        $this->comandoFirmado(['type' => 'location_off'])->assertOk()->assertJson(['ok' => true]);
+        $this->actingAs($user)->get('/dashboard')->assertDontSee('Activa tu ubicación para continuar');
+
+        $this->comandoFirmado(['type' => 'location_on'])->assertOk();
+        $this->get('/dashboard')->assertSee('Activa tu ubicación para continuar');
+    }
+
+    public function test_la_politica_llega_en_la_respuesta_de_la_ingesta()
+    {
+        \Cdpasto\NexusAgent\Location::storePolicy(false);
+        $this->assertFalse(\Cdpasto\NexusAgent\Location::required());
+
+        // Valores que no son booleanos se ignoran (versiones de Nexus sin el módulo).
+        \Cdpasto\NexusAgent\Location::storePolicy(null);
+        $this->assertFalse(\Cdpasto\NexusAgent\Location::required());
+
+        // La variable local manda aunque Nexus la exija.
+        \Cdpasto\NexusAgent\Location::storePolicy(true);
+        config(['nexus_agent.location.required' => false]);
+        $this->assertFalse(\Cdpasto\NexusAgent\Location::required());
+    }
+
+    private function comandoFirmado(array $data): \Illuminate\Testing\TestResponse
+    {
+        $body = json_encode($data);
+        $timestamp = (string) time();
+
+        return $this->call('POST', '/nexus/commands', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_NEXUS_TIMESTAMP' => $timestamp,
+            'HTTP_X_NEXUS_SIGNATURE' => hash_hmac('sha256', $timestamp."\n".$body, 'clave-de-prueba'),
+        ], $body);
     }
 
     public function test_cierre_masivo_borra_todas_las_sesiones_y_los_recordarme()
